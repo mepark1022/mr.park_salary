@@ -99,91 +99,98 @@ function reverseCalcHr(grossTarget, sched, meal) {
 
 function InsuranceCard({ r, count, label, isOrange }) {
   if (!r) return null;
-  const border = isOrange ? "border-orange-200 bg-orange-50" : "border-blue-200 bg-blue-50";
-  const titleC = isOrange ? "text-orange-800" : "text-blue-800";
-  const rateC = isOrange ? "text-orange-600" : "text-blue-600";
-  const sumBg = isOrange ? "bg-orange-500" : "bg-blue-600";
+  const accent = isOrange ? {
+    border: "border-orange-300", bg: "bg-orange-50", header: "bg-orange-500",
+    titleC: "text-orange-900", rateC: "text-orange-600", tagBg: "bg-orange-100 text-orange-700",
+    sumBg: "bg-orange-500", rowHover: "hover:bg-orange-50",
+  } : {
+    border: "border-blue-300", bg: "bg-blue-50", header: "bg-blue-600",
+    titleC: "text-blue-900", rateC: "text-blue-600", tagBg: "bg-blue-100 text-blue-700",
+    sumBg: "bg-blue-600", rowHover: "hover:bg-blue-50",
+  };
+
   return (
-    <div className={`rounded-2xl border-2 p-4 mb-4 ${border}`}>
-      <div className="flex justify-between items-start mb-3">
+    <div className={`rounded-2xl border-2 overflow-hidden ${accent.border} ${accent.bg} flex flex-col`}>
+      {/* 헤더 */}
+      <div className={`${accent.header} text-white px-4 py-3 flex justify-between items-center`}>
         <div>
-          <div className={`text-sm font-black ${titleC}`}>{label}</div>
-          <div className="text-xs text-gray-400 mt-0.5">{count}명 · 1인 기준</div>
+          <div className="text-sm font-black">{label}</div>
+          <div className="text-xs opacity-75 mt-0.5">{count}명 재직 · 1인 기준</div>
         </div>
         <div className="text-right">
-          <div className={`text-2xl font-black font-mono ${rateC}`}>
-            {fmt(r.hrRate)}<span className="text-sm font-bold">원/h</span>
-          </div>
-          <div className="text-xs text-gray-400">시급</div>
+          <div className="text-2xl font-black font-mono">{fmt(r.hrRate)}<span className="text-xs font-bold opacity-80">원/h</span></div>
+          <div className="text-xs opacity-60">역산 시급</div>
         </div>
       </div>
 
-      {/* 4박스 */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {[
-          ["세전 월급", r.gross, isOrange ? "text-orange-700" : "text-blue-700"],
-          ["💚 실수령액", r.net, "text-green-700"],
-          ["🏢 사업주 4대보험", r.insR, "text-red-600"],
-          ["1인 총 인건비", r.totCost, "text-purple-700"],
-        ].map(([l, v, c]) => (
-          <div key={l} className="bg-white rounded-xl p-3 text-center shadow-sm">
-            <div className={`text-base font-black font-mono ${c}`}>{fmt(v)}<span className="text-xs">원</span></div>
-            <div className="text-xs text-gray-400 mt-0.5">{l}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* 사업주 4대보험 명세 */}
-      <div className="bg-white rounded-xl p-3 mb-3">
-        <div className="text-xs font-black text-gray-600 mb-2">🏢 사업주 4대보험 명세</div>
-        <div className="space-y-1.5">
+      <div className="p-3 flex flex-col gap-2 flex-1">
+        {/* 핵심 수치 2×2 */}
+        <div className="grid grid-cols-2 gap-1.5">
           {[
-            ["국민연금 (4.75%)", r.npR],
-            ["건강보험 (3.595%)", r.hiR],
-            ["장기요양 (×13.14%)", r.ltR],
-            ["고용보험 (1.05%)", r.eiR],
-            ["산재보험 (1.47%)", r.wiR],
-          ].map(([l, v]) => (
-            <div key={l} className="flex justify-between items-center text-xs py-0.5 border-b border-gray-50 last:border-0">
-              <span className="text-gray-400">{l}</span>
-              <span className="font-mono font-bold text-red-500">{fmt(v)}원</span>
+            ["세전 월급", r.gross, isOrange ? "text-orange-700" : "text-blue-700"],
+            ["💚 실수령액", r.net, "text-emerald-700"],
+            ["🏢 사업주 보험", r.insR, "text-red-600"],
+            ["1인 총 인건비", r.totCost, "text-purple-700"],
+          ].map(([l, v, c]) => (
+            <div key={l} className="bg-white rounded-xl p-2.5 text-center shadow-sm">
+              <div className={`text-sm font-black font-mono leading-tight ${c}`}>{fmt(v)}<span className="text-xs">원</span></div>
+              <div className="text-xs text-gray-400 mt-0.5 leading-tight">{l}</div>
             </div>
           ))}
-          <div className="flex justify-between items-center text-xs font-black pt-1.5 mt-1 border-t-2 border-gray-100">
+        </div>
+
+        {/* 사업주 4대보험 */}
+        <div className="bg-white rounded-xl p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-xs font-black text-gray-700">🏢 사업주 4대보험 명세</span>
+          </div>
+          <div className="space-y-1">
+            {[
+              ["국민연금", "4.75%", r.npR],
+              ["건강보험", "3.595%", r.hiR],
+              ["장기요양", "×13.14%", r.ltR],
+              ["고용보험", "1.05%", r.eiR],
+              ["산재보험", "1.47%", r.wiR],
+            ].map(([name, rate, v]) => (
+              <div key={name} className={`flex items-center justify-between text-xs px-1 py-0.5 rounded ${accent.rowHover}`}>
+                <span className="text-gray-500 w-16 flex-shrink-0">{name}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-mono flex-shrink-0 ${accent.tagBg}`}>{rate}</span>
+                <span className="font-mono font-bold text-red-500 text-right">{fmt(v)}원</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between items-center text-xs font-black pt-2 mt-1.5 border-t-2 border-gray-100">
             <span className="text-gray-700">사업주 부담 합계</span>
-            <span className="font-mono text-red-600 text-sm">{fmt(r.insR)}원</span>
+            <span className="font-mono text-red-600">{fmt(r.insR)}원</span>
           </div>
         </div>
-      </div>
 
-      {/* 근로자 공제 요약 */}
-      <div className="bg-white rounded-xl p-3 mb-3">
-        <div className="text-xs font-black text-gray-600 mb-2">👤 근로자 공제 요약</div>
-        <div className="space-y-1">
-          {[
-            ["4대보험(근로자)", r.insE],
-            ["소득세+지방세", r.itax + r.ltax],
-          ].map(([l, v]) => (
-            <div key={l} className="flex justify-between text-xs">
-              <span className="text-gray-400">{l}</span>
-              <span className="font-mono font-bold text-gray-500">-{fmt(v)}원</span>
+        {/* 근로자 공제 */}
+        <div className="bg-white rounded-xl p-3">
+          <div className="text-xs font-black text-gray-700 mb-1.5">👤 근로자 공제</div>
+          <div className="space-y-1">
+            {[["4대보험(근로자)", r.insE], ["소득세+지방세", r.itax + r.ltax]].map(([l, v]) => (
+              <div key={l} className="flex justify-between text-xs">
+                <span className="text-gray-400">{l}</span>
+                <span className="font-mono font-bold text-gray-500">-{fmt(v)}원</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-xs font-bold pt-1 border-t border-gray-100">
+              <span className="text-gray-600">공제 합계</span>
+              <span className="font-mono text-gray-600">-{fmt(r.totDed)}원</span>
             </div>
-          ))}
-          <div className="flex justify-between text-xs font-bold pt-1 border-t border-gray-100">
-            <span className="text-gray-600">공제 합계</span>
-            <span className="font-mono text-gray-600">-{fmt(r.totDed)}원</span>
           </div>
         </div>
-      </div>
 
-      {/* 합산 */}
-      {count > 1 && (
-        <div className={`rounded-xl p-3 text-white text-center ${sumBg}`}>
-          <div className="text-xs opacity-80 mb-0.5">{count}명 합산 월 총 인건비</div>
-          <div className="text-xl font-black font-mono">{fmt(r.totCost * count)}원</div>
-          <div className="text-xs opacity-70 mt-0.5">사업주 보험 {fmt(r.insR * count)}원 포함</div>
-        </div>
-      )}
+        {/* N명 합산 */}
+        {count > 1 && (
+          <div className={`rounded-xl p-3 text-white text-center ${accent.sumBg}`}>
+            <div className="text-xs opacity-80">{count}명 합산 월 총 인건비</div>
+            <div className="text-lg font-black font-mono mt-0.5">{fmt(r.totCost * count)}원</div>
+            <div className="text-xs opacity-70">사업주 보험 {fmt(r.insR * count)}원 포함</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -281,7 +288,7 @@ export default function App() {
 
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-700 to-indigo-900 text-white px-5 py-5 shadow-xl">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <h1 className="text-xl font-black tracking-tight">💼 2026 인건비 견적 계산기</h1>
           <p className="text-blue-200 text-xs mt-1">월급 입력 → 시급 역산 · 사업주 4대보험 · 평일/주말 직원 구분 · 최저임금 10,320원</p>
         </div>
@@ -298,10 +305,10 @@ export default function App() {
         ))}
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+      <div className="max-w-7xl mx-auto px-4 pt-5 grid grid-cols-1 lg:grid-cols-[390px,1fr] gap-5 items-start">
 
         {/* ─── 입력 패널 ─── */}
-        <div className={activeTab === "input" ? "block" : "hidden md:block"}>
+        <div className={activeTab === "input" ? "block" : "hidden lg:block"}>
 
           {/* 급여 설정 */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
@@ -485,38 +492,44 @@ export default function App() {
         </div>
 
         {/* ─── 결과 패널 ─── */}
-        <div className={activeTab === "result" ? "block" : "hidden md:block"}>
+        <div className={activeTab === "result" ? "block" : "hidden lg:block"}>
 
-          <InsuranceCard
-            r={c.wdR}
-            count={c.wdN}
-            label={`📅 평일 직원 · 주 ${wdDays}일`}
-            isOrange={false}
-          />
-
-          {hasWe && c.weR && (
+          {/* 카드 가로 배치 */}
+          <div className={`grid gap-4 mb-4 ${hasWe && c.weR ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}>
             <InsuranceCard
-              r={c.weR}
-              count={c.weN}
-              label={`🌅 주말 직원 · 주 ${weDays}일`}
-              isOrange={true}
+              r={c.wdR}
+              count={c.wdN}
+              label={`📅 평일 직원 · 주 ${wdDays}일`}
+              isOrange={false}
             />
-          )}
+            {hasWe && c.weR && (
+              <InsuranceCard
+                r={c.weR}
+                count={c.weN}
+                label={`🌅 주말 직원 · 주 ${weDays}일`}
+                isOrange={true}
+              />
+            )}
+          </div>
 
-          {/* 전체 합산 */}
+          {/* 전체 합산 (주말 있을 때) */}
           {hasWe && c.weR && (
             <div className="bg-gradient-to-br from-slate-700 to-slate-900 text-white rounded-2xl p-4 mb-4">
-              <h3 className="text-sm font-black mb-1">📊 전체 합산</h3>
-              <p className="text-xs text-slate-400 mb-3">평일 {c.wdN}명 + 주말 {c.weN}명 = 총 {c.wdN + c.weN}명</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-black">📊 전체 합산</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">평일 {c.wdN}명 + 주말 {c.weN}명 = 총 {c.wdN + c.weN}명</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-2">
                 {[
                   ["💼 월 총 인건비", c.total.totCost, "text-yellow-300"],
-                  ["🏢 사업주 보험 합계", c.total.insR, "text-red-300"],
-                  ["💚 월 총 실수령", c.total.net, "text-green-300"],
+                  ["🏢 사업주 보험", c.total.insR, "text-red-300"],
+                  ["💚 총 실수령액", c.total.net, "text-green-300"],
                   ["📋 총 지급(세전)", c.total.gross, "text-blue-300"],
                 ].map(([l, v, col]) => (
                   <div key={l} className="bg-white bg-opacity-10 rounded-xl p-3 text-center">
-                    <div className={`text-base font-black font-mono ${col}`}>{fmt(v)}<span className="text-xs">원</span></div>
+                    <div className={`text-sm font-black font-mono ${col}`}>{fmt(v)}<span className="text-xs">원</span></div>
                     <div className="text-slate-300 text-xs mt-0.5">{l}</div>
                   </div>
                 ))}
