@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 
-const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 const MIN_WAGE = 10320;
 const WEEKS = 4.345;
 
@@ -11,6 +10,27 @@ function timeToMin(t) {
 function fmt(n) {
   return Math.round(n).toLocaleString("ko-KR");
 }
+function parseNum(s) {
+  if (typeof s === "number") return s;
+  const n = parseInt(String(s).replace(/[^0-9]/g, ""));
+  return isNaN(n) ? 0 : n;
+}
+
+function NumberInput({ value, onChange, placeholder = "", className = "" }) {
+  const num = parseNum(value);
+  const display = num === 0 ? "" : num.toLocaleString("ko-KR");
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={display}
+      placeholder={placeholder}
+      onChange={e => onChange(e.target.value.replace(/[^0-9]/g, ""))}
+      className={className}
+    />
+  );
+}
+
 function getIncomeTax(taxable, dep) {
   let tax = 0;
   if (taxable <= 1060000) tax = 0;
@@ -23,14 +43,31 @@ function getIncomeTax(taxable, dep) {
   return Math.max(0, Math.round(tax - dd[Math.min(dep, 7)]));
 }
 
-const defaultDay = (work) => ({ work, start: "09:00", end: "18:00", breakMin: 60 });
+function buildSched(days, start, end, brk) {
+  const sm = timeToMin(start), em = timeToMin(end);
+  const workH = Math.max(0, em - sm - brk) / 60;
+  const e2 = em < sm ? em + 1440 : em;
+  const ns = Math.max(sm, 22 * 60), ne = Math.min(e2, 30 * 60);
+  const nightH = ns < ne ? (ne - ns) / 60 : 0;
+  const weeklyH = workH * days;
+  const hasWL = weeklyH >= 15;
+  const monthlyBasicH = weeklyH * WEEKS;
+  const monthlyWLH = hasWL && days > 0 ? (weeklyH / days) * WEEKS : 0;
+  const monthlyNightH = nightH * days * WEEKS;
+  const dailyOT = Math.max(0, workH - 8);
+  const weeklyOT = Math.max(0, weeklyH - 40);
+  const monthlyOTH = Math.max(dailyOT * days, weeklyOT) * WEEKS;
+  return { workH, weeklyH, monthlyBasicH, monthlyWLH, monthlyNightH, monthlyOTH, hasWL };
+}
 
-function calcForRate(hrRate, monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNightH, meal, dep) {
+function calcForRate(hrRate, sched, meal, dep) {
+  if (hrRate <= 0) return null;
+  const { monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNightH } = sched;
+  const mealNT = Math.min(meal, 200000);
   const basicPay = hrRate * monthlyBasicH;
   const wlPay = hrRate * monthlyWLH;
   const otPay = hrRate * 0.5 * monthlyOTH;
   const ntPay = hrRate * 0.5 * monthlyNightH;
-  const mealNT = Math.min(meal, 200000);
   const gross = basicPay + wlPay + otPay + ntPay + mealNT;
   const taxBase = basicPay + wlPay + otPay + ntPay;
   const npBase = Math.min(taxBase, 6370000);
@@ -50,118 +87,207 @@ function calcForRate(hrRate, monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNight
   const wiR = Math.round(taxBase * 0.0147);
   const insR = npR + hiR + ltR + eiR + wiR;
   const totCost = gross + insR;
-  const totalPaidH = monthlyBasicH + monthlyWLH;
-  const hrCost = totalPaidH > 0 ? totCost / totalPaidH : 0;
-  return { hrRate, basicPay, wlPay, otPay, ntPay, mealNT, gross, npE, hiE, ltE, eiE, insE, itax, ltax, totDed, net, npR, hiR, ltR, eiR, wiR, insR, totCost, hrCost };
+  return { hrRate, gross, net, totDed, insE, insR, totCost, npR, hiR, ltR, eiR, wiR, npE, hiE, ltE, eiE, itax, ltax };
+}
+
+function reverseCalcHr(grossTarget, sched, meal) {
+  const mealNT = Math.min(meal, 200000);
+  const { monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNightH } = sched;
+  const div = monthlyBasicH + monthlyWLH + 0.5 * monthlyOTH + 0.5 * monthlyNightH;
+  return div > 0 ? Math.max(0, (grossTarget - mealNT) / div) : 0;
+}
+
+function InsuranceCard({ r, count, label, isOrange }) {
+  if (!r) return null;
+  const border = isOrange ? "border-orange-200 bg-orange-50" : "border-blue-200 bg-blue-50";
+  const titleC = isOrange ? "text-orange-800" : "text-blue-800";
+  const rateC = isOrange ? "text-orange-600" : "text-blue-600";
+  const sumBg = isOrange ? "bg-orange-500" : "bg-blue-600";
+  return (
+    <div className={`rounded-2xl border-2 p-4 mb-4 ${border}`}>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <div className={`text-sm font-black ${titleC}`}>{label}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{count}명 · 1인 기준</div>
+        </div>
+        <div className="text-right">
+          <div className={`text-2xl font-black font-mono ${rateC}`}>
+            {fmt(r.hrRate)}<span className="text-sm font-bold">원/h</span>
+          </div>
+          <div className="text-xs text-gray-400">시급</div>
+        </div>
+      </div>
+
+      {/* 4박스 */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {[
+          ["세전 월급", r.gross, isOrange ? "text-orange-700" : "text-blue-700"],
+          ["💚 실수령액", r.net, "text-green-700"],
+          ["🏢 사업주 4대보험", r.insR, "text-red-600"],
+          ["1인 총 인건비", r.totCost, "text-purple-700"],
+        ].map(([l, v, c]) => (
+          <div key={l} className="bg-white rounded-xl p-3 text-center shadow-sm">
+            <div className={`text-base font-black font-mono ${c}`}>{fmt(v)}<span className="text-xs">원</span></div>
+            <div className="text-xs text-gray-400 mt-0.5">{l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 사업주 4대보험 명세 */}
+      <div className="bg-white rounded-xl p-3 mb-3">
+        <div className="text-xs font-black text-gray-600 mb-2">🏢 사업주 4대보험 명세</div>
+        <div className="space-y-1.5">
+          {[
+            ["국민연금 (4.75%)", r.npR],
+            ["건강보험 (3.595%)", r.hiR],
+            ["장기요양 (×13.14%)", r.ltR],
+            ["고용보험 (1.05%)", r.eiR],
+            ["산재보험 (1.47%)", r.wiR],
+          ].map(([l, v]) => (
+            <div key={l} className="flex justify-between items-center text-xs py-0.5 border-b border-gray-50 last:border-0">
+              <span className="text-gray-400">{l}</span>
+              <span className="font-mono font-bold text-red-500">{fmt(v)}원</span>
+            </div>
+          ))}
+          <div className="flex justify-between items-center text-xs font-black pt-1.5 mt-1 border-t-2 border-gray-100">
+            <span className="text-gray-700">사업주 부담 합계</span>
+            <span className="font-mono text-red-600 text-sm">{fmt(r.insR)}원</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 근로자 공제 요약 */}
+      <div className="bg-white rounded-xl p-3 mb-3">
+        <div className="text-xs font-black text-gray-600 mb-2">👤 근로자 공제 요약</div>
+        <div className="space-y-1">
+          {[
+            ["4대보험(근로자)", r.insE],
+            ["소득세+지방세", r.itax + r.ltax],
+          ].map(([l, v]) => (
+            <div key={l} className="flex justify-between text-xs">
+              <span className="text-gray-400">{l}</span>
+              <span className="font-mono font-bold text-gray-500">-{fmt(v)}원</span>
+            </div>
+          ))}
+          <div className="flex justify-between text-xs font-bold pt-1 border-t border-gray-100">
+            <span className="text-gray-600">공제 합계</span>
+            <span className="font-mono text-gray-600">-{fmt(r.totDed)}원</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 합산 */}
+      {count > 1 && (
+        <div className={`rounded-xl p-3 text-white text-center ${sumBg}`}>
+          <div className="text-xs opacity-80 mb-0.5">{count}명 합산 월 총 인건비</div>
+          <div className="text-xl font-black font-mono">{fmt(r.totCost * count)}원</div>
+          <div className="text-xs opacity-70 mt-0.5">사업주 보험 {fmt(r.insR * count)}원 포함</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Counter({ value, onChange }) {
+  const n = parseNum(value);
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => onChange(String(Math.max(1, n - 1)))}
+        className="w-9 h-9 rounded-xl border-2 border-gray-200 text-xl font-bold text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center bg-white transition-all">
+        −
+      </button>
+      <NumberInput
+        value={value}
+        onChange={onChange}
+        className="w-20 text-center py-2 border-2 border-gray-200 rounded-xl text-lg font-black font-mono bg-gray-50 focus:outline-none focus:border-blue-500"
+      />
+      <button
+        onClick={() => onChange(String(n + 1))}
+        className="w-9 h-9 rounded-xl border-2 border-gray-200 text-xl font-bold text-gray-400 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center bg-white transition-all">
+        +
+      </button>
+      <span className="text-sm font-bold text-gray-500">명</span>
+    </div>
+  );
 }
 
 export default function App() {
-  const [scheduleMode, setScheduleMode] = useState("simple");
-  const [simple, setSimple] = useState({ start: "09:00", end: "18:00", breakMin: 60, daysPerWeek: 5 });
-  const [weekly, setWeekly] = useState(DAYS.map((_, i) => defaultDay(i < 5)));
-  const [hrMode, setHrMode] = useState("both");
-  const [customHr, setCustomHr] = useState(13000);
-  const [dep, setDep] = useState(1);
-  const [meal, setMeal] = useState(200000);
   const [activeTab, setActiveTab] = useState("input");
 
-  const calc = useMemo(() => {
-    let dailyWorkH = 0, weeklyWorkH = 0, nightHperWeek = 0, workingDays = 0;
-    if (scheduleMode === "simple") {
-      const sm = timeToMin(simple.start);
-      const em = timeToMin(simple.end);
-      const actualM = Math.max(0, em - sm - simple.breakMin);
-      dailyWorkH = actualM / 60;
-      workingDays = simple.daysPerWeek;
-      weeklyWorkH = dailyWorkH * workingDays;
-      const e2 = em < sm ? em + 1440 : em;
-      const ns = Math.max(sm, 22 * 60), ne = Math.min(e2, 30 * 60);
-      nightHperWeek = (ns < ne ? (ne - ns) / 60 : 0) * workingDays;
-    } else {
-      weekly.forEach((d) => {
-        if (!d.work) return;
-        const sm = timeToMin(d.start), em = timeToMin(d.end);
-        weeklyWorkH += Math.max(0, em - sm - d.breakMin) / 60;
-        workingDays++;
-        const e2 = em < sm ? em + 1440 : em;
-        const ns = Math.max(sm, 22 * 60), ne = Math.min(e2, 30 * 60);
-        nightHperWeek += ns < ne ? (ne - ns) / 60 : 0;
-      });
-      dailyWorkH = workingDays > 0 ? weeklyWorkH / workingDays : 0;
-    }
-    const hasWL = weeklyWorkH >= 15;
-    const wlHperWeek = hasWL ? (workingDays > 0 ? weeklyWorkH / workingDays : 0) : 0;
-    const monthlyBasicH = weeklyWorkH * WEEKS;
-    const monthlyWLH = wlHperWeek * WEEKS;
-    const monthlyNightH = nightHperWeek * WEEKS;
-    const dailyOT = Math.max(0, dailyWorkH - 8);
-    const weeklyOT = Math.max(0, weeklyWorkH - 40);
-    const monthlyOTH = Math.max(dailyOT * workingDays, weeklyOT) * WEEKS;
-    return {
-      dailyWorkH, weeklyWorkH, monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNightH,
-      hasWL, workingDays,
-      minResult: calcForRate(MIN_WAGE, monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNightH, meal, dep),
-      customResult: calcForRate(customHr, monthlyBasicH, monthlyWLH, monthlyOTH, monthlyNightH, meal, dep),
-    };
-  }, [scheduleMode, simple, weekly, customHr, dep, meal]);
+  // Weekday
+  const [wdDays, setWdDays] = useState(5);
+  const [wdStart, setWdStart] = useState("09:00");
+  const [wdEnd, setWdEnd] = useState("18:00");
+  const [wdBreak, setWdBreak] = useState(60);
+  const [wdCount, setWdCount] = useState("1");
 
-  const ResultBlock = ({ r, label, accent }) => {
-    const isMW = accent === "green";
-    return (
-      <div className={`rounded-2xl border-2 p-4 mb-4 ${isMW ? "border-emerald-300 bg-emerald-50" : "border-blue-300 bg-blue-50"}`}>
-        <div className="flex justify-between items-center mb-3">
-          <span className={`text-sm font-black ${isMW ? "text-emerald-800" : "text-blue-800"}`}>{label}</span>
-          <div className="text-right">
-            <div className={`text-xl font-black font-mono ${isMW ? "text-emerald-700" : "text-blue-700"}`}>
-              {fmt(r.hrRate)}<span className="text-sm font-bold">원/h</span>
-            </div>
-            <div className="text-xs text-gray-400">시급</div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {[["총 지급액(세전)", r.gross, isMW ? "text-emerald-700" : "text-blue-700"],
-            ["💚 실수령액", r.net, "text-green-700"],
-            ["공제액 합계", r.totDed, "text-red-600"],
-            ["사업주 총비용", r.totCost, "text-orange-600"]
-          ].map(([l, v, color]) => (
-            <div key={l} className="bg-white rounded-xl p-3 text-center shadow-sm">
-              <div className={`text-base font-black font-mono ${color}`}>{fmt(v)}<span className="text-xs">원</span></div>
-              <div className="text-xs text-gray-400 mt-0.5">{l}</div>
-            </div>
-          ))}
-        </div>
-        <div className="bg-white rounded-xl p-3 mb-2">
-          <div className="text-xs font-bold text-gray-500 mb-2">근로자 공제 상세</div>
-          <div className="space-y-1.5">
-            {[["국민연금(4.75%)", r.npE], ["건강보험(3.595%)", r.hiE], ["장기요양(×13.14%)", r.ltE],
-              ["고용보험(0.9%)", r.eiE], ["소득세+지방세", r.itax + r.ltax]
-            ].map(([l, v]) => (
-              <div key={l} className="flex justify-between text-xs">
-                <span className="text-gray-400">{l}</span>
-                <span className="font-mono font-bold text-red-500">-{fmt(v)}원</span>
-              </div>
-            ))}
-            <div className="border-t pt-1.5 flex justify-between text-xs font-bold">
-              <span className="text-gray-600">사업주 부담 보험</span>
-              <span className="font-mono text-orange-500">+{fmt(r.insR)}원</span>
-            </div>
-          </div>
-        </div>
-        <div className={`text-center py-2.5 rounded-xl text-sm font-black ${isMW ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
-          💼 시간당 실질 인건비 <span className="font-mono">{fmt(r.hrCost)}원/h</span>
-        </div>
-      </div>
-    );
-  };
+  // Weekend
+  const [hasWe, setHasWe] = useState(false);
+  const [weDays, setWeDays] = useState(1);
+  const [weSame, setWeSame] = useState(true);
+  const [weStart, setWeStart] = useState("09:00");
+  const [weEnd, setWeEnd] = useState("18:00");
+  const [weBreak, setWeBreak] = useState(60);
+  const [weCount, setWeCount] = useState("1");
+
+  // Salary
+  const [mode, setMode] = useState("monthly");
+  const [hrStr, setHrStr] = useState("13000");
+  const [moStr, setMoStr] = useState("2500000");
+
+  // Other
+  const [dep, setDep] = useState(1);
+  const [mealStr, setMealStr] = useState("200000");
+
+  const c = useMemo(() => {
+    const meal = parseNum(mealStr);
+    const wdN = Math.max(1, parseNum(wdCount));
+    const weN = Math.max(1, parseNum(weCount));
+
+    const wdS = buildSched(wdDays, wdStart, wdEnd, wdBreak);
+
+    const hr = mode === "hourly"
+      ? parseNum(hrStr)
+      : reverseCalcHr(parseNum(moStr), wdS, meal);
+
+    const wdR = calcForRate(hr, wdS, meal, dep);
+
+    let weS = null, weR = null;
+    if (hasWe && weDays > 0) {
+      const s = weSame ? wdStart : weStart;
+      const e = weSame ? wdEnd : weEnd;
+      const b = weSame ? wdBreak : weBreak;
+      weS = buildSched(weDays, s, e, b);
+      weR = calcForRate(hr, weS, meal, dep);
+    }
+
+    const total = {
+      gross: (wdR?.gross || 0) * wdN + (weR?.gross || 0) * weN,
+      insR: (wdR?.insR || 0) * wdN + (weR?.insR || 0) * weN,
+      net: (wdR?.net || 0) * wdN + (weR?.net || 0) * weN,
+      totCost: (wdR?.totCost || 0) * wdN + (weR?.totCost || 0) * weN,
+    };
+
+    return { hr, wdS, wdR, wdN, weS, weR, weN, total, meal };
+  }, [wdDays, wdStart, wdEnd, wdBreak, wdCount, hasWe, weDays, weSame, weStart, weEnd, weBreak, weCount, mode, hrStr, moStr, dep, mealStr]);
+
+  const ic = "w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 focus:bg-white transition-all";
+  const timeC = "w-full px-2 py-2 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500";
+  const timeOC = "w-full px-2 py-2 border-2 border-orange-200 rounded-xl text-sm bg-orange-50 focus:outline-none focus:border-orange-500";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 pb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 pb-10">
+
+      {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-700 to-indigo-900 text-white px-5 py-5 shadow-xl">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-xl font-black tracking-tight">💼 2026 인건비 견적 계산기</h1>
-          <p className="text-blue-200 text-xs mt-1">출퇴근·휴게시간 입력 → 시급·월급 자동 계산 · 최저임금 10,320원 기준</p>
+          <p className="text-blue-200 text-xs mt-1">월급 입력 → 시급 역산 · 사업주 4대보험 · 평일/주말 직원 구분 · 최저임금 10,320원</p>
         </div>
       </div>
+
+      {/* 탭 */}
       <div className="flex border-b border-gray-200 bg-white shadow-sm sticky top-0 z-20">
         {[["input", "⏰ 근무 입력"], ["result", "💰 견적 결과"]].map(([k, v]) => (
           <button key={k} onClick={() => setActiveTab(k)}
@@ -171,194 +297,234 @@ export default function App() {
           </button>
         ))}
       </div>
+
       <div className="max-w-4xl mx-auto px-4 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+
+        {/* ─── 입력 패널 ─── */}
         <div className={activeTab === "input" ? "block" : "hidden md:block"}>
+
+          {/* 급여 설정 */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
-            <h3 className="text-sm font-black text-blue-900 pb-2 mb-3 border-b-2 border-blue-500">⏰ 실제 근무 시간 입력</h3>
-            <div className="flex gap-2 bg-gray-100 p-1 rounded-xl mb-4">
-              {[["simple", "📅 일괄(전 요일 동일)"], ["weekly", "🗓 요일별 개별 설정"]].map(([k, v]) => (
-                <button key={k} onClick={() => setScheduleMode(k)}
-                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${scheduleMode === k ? "bg-white text-blue-700 shadow-md" : "text-gray-500"}`}>
+            <h3 className="text-sm font-black text-blue-900 pb-2 mb-3 border-b-2 border-blue-500">💰 급여 설정</h3>
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-xl mb-3">
+              {[["monthly", "💵 월급 입력 (역산)"], ["hourly", "⏱ 시급 직접 입력"]].map(([k, v]) => (
+                <button key={k} onClick={() => setMode(k)}
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${mode === k ? "bg-white text-blue-700 shadow-md" : "text-gray-500"}`}>
                   {v}
                 </button>
               ))}
             </div>
-            {scheduleMode === "simple" ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {[["출근", simple.start, v => setSimple(p => ({ ...p, start: v }))],
-                    ["퇴근", simple.end, v => setSimple(p => ({ ...p, end: v }))]
-                  ].map(([label, value, onChange]) => (
-                    <div key={label}>
-                      <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">{label}</label>
-                      <input type="time" value={value} onChange={e => onChange(e.target.value)}
-                        className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500" />
+            {mode === "monthly" ? (
+              <div>
+                <label className="block text-xs font-bold text-gray-400 mb-1.5">1인 월 기대급여 (세전)</label>
+                <NumberInput value={moStr} onChange={setMoStr} placeholder="2,500,000"
+                  className={`${ic} font-mono text-xl font-black text-right pr-10`} />
+                <span className="block text-right text-xs text-gray-400 -mt-7 pr-3 pointer-events-none">원</span>
+                <div className="mt-3">
+                  {c.hr > 0 && c.hr < MIN_WAGE && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-bold">
+                      ❌ 역산 시급 {fmt(c.hr)}원 — 2026 최저임금(10,320원) 위반!
                     </div>
-                  ))}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">휴게(분)</label>
-                    <input type="number" value={simple.breakMin} min={0} max={480} step={30}
-                      onChange={e => setSimple(p => ({ ...p, breakMin: parseInt(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">주 근무일수</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[5, 6, 7].map(n => (
-                      <button key={n} onClick={() => setSimple(p => ({ ...p, daysPerWeek: n }))}
-                        className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${simple.daysPerWeek === n ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-500"}`}>
-                        주 {n}일
-                      </button>
-                    ))}
-                    <input type="number" value={simple.daysPerWeek} min={1} max={7}
-                      onChange={e => setSimple(p => ({ ...p, daysPerWeek: parseInt(e.target.value) || 5 }))}
-                      className="py-2.5 border-2 border-gray-200 rounded-xl text-sm text-center bg-gray-50 focus:outline-none focus:border-blue-500" />
-                  </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-600 font-bold text-sm">⚡ 일 실근무시간</span>
-                    <span className="text-blue-900 font-black font-mono text-xl">
-                      {Math.max(0, (timeToMin(simple.end) - timeToMin(simple.start) - simple.breakMin) / 60).toFixed(1)}시간
-                    </span>
-                  </div>
+                  )}
+                  {c.hr > 0 && c.hr >= MIN_WAGE && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex justify-between items-center">
+                      <span className="text-xs text-blue-600 font-bold">✅ 역산 시급</span>
+                      <span className="text-lg font-black font-mono text-blue-700">{fmt(c.hr)}원/h</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
-                {DAYS.map((day, i) => (
-                  <div key={day} className={`rounded-xl border-2 p-3 transition-all ${weekly[i].work ? "border-blue-200 bg-blue-50" : "border-gray-100 bg-gray-50"}`}>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setWeekly(w => w.map((d, j) => j === i ? { ...d, work: !d.work } : d))}
-                        className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 ${weekly[i].work ? "bg-blue-600" : "bg-gray-300"}`}>
-                        <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow transition-all ${weekly[i].work ? "left-6" : "left-1"}`} />
-                      </button>
-                      <span className={`w-5 text-sm font-black flex-shrink-0 ${i >= 5 ? "text-red-500" : "text-gray-700"}`}>{day}</span>
-                      {weekly[i].work ? (
-                        <div className="flex gap-1.5 flex-1 items-center">
-                          <input type="time" value={weekly[i].start}
-                            onChange={e => setWeekly(w => w.map((d, j) => j === i ? { ...d, start: e.target.value } : d))}
-                            className="flex-1 px-2 py-1.5 border border-blue-200 rounded-lg text-xs bg-white focus:outline-none" />
-                          <span className="text-gray-300 text-xs">~</span>
-                          <input type="time" value={weekly[i].end}
-                            onChange={e => setWeekly(w => w.map((d, j) => j === i ? { ...d, end: e.target.value } : d))}
-                            className="flex-1 px-2 py-1.5 border border-blue-200 rounded-lg text-xs bg-white focus:outline-none" />
-                          <input type="number" value={weekly[i].breakMin} min={0} step={30}
-                            onChange={e => setWeekly(w => w.map((d, j) => j === i ? { ...d, breakMin: parseInt(e.target.value) || 0 } : d))}
-                            className="w-14 px-1.5 py-1.5 border border-blue-200 rounded-lg text-xs text-center bg-white focus:outline-none" />
-                          <span className="text-xs text-gray-400">분</span>
-                        </div>
-                      ) : <span className="text-xs text-gray-400 ml-1">휴무</span>}
-                    </div>
-                    {weekly[i].work && (
-                      <div className="mt-1.5 ml-14 text-xs text-blue-500 font-semibold">
-                        실근무 {Math.max(0, (timeToMin(weekly[i].end) - timeToMin(weekly[i].start) - weekly[i].breakMin) / 60).toFixed(1)}시간
-                      </div>
-                    )}
-                  </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 mb-1.5">시급 (원)</label>
+                <NumberInput value={hrStr} onChange={setHrStr} placeholder="13,000"
+                  className={`${ic} font-mono text-xl font-black text-right pr-10`} />
+                <span className="block text-right text-xs text-gray-400 -mt-7 pr-3 pointer-events-none">원/h</span>
+                {parseNum(hrStr) > 0 && parseNum(hrStr) < MIN_WAGE && (
+                  <p className="text-xs text-red-500 mt-2 font-bold">❌ 2026 최저임금(10,320원) 위반!</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 평일 근무 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+            <h3 className="text-sm font-black text-blue-900 pb-2 mb-3 border-b-2 border-blue-500">
+              📅 평일 근무 <span className="text-blue-400 text-xs font-normal">월~금</span>
+            </h3>
+
+            <div className="mb-3">
+              <label className="block text-xs font-bold text-gray-400 mb-2">주 근무일수</label>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} onClick={() => setWdDays(n)}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${wdDays === n ? "bg-blue-600 border-blue-600 text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-blue-300"}`}>
+                    {n}일
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
-            <h3 className="text-sm font-black text-blue-900 pb-2 mb-3 border-b-2 border-blue-500">💰 시급 기준 설정</h3>
-            <div className="flex gap-2 bg-gray-100 p-1 rounded-xl mb-3">
-              {[["min", "최저임금만"], ["custom", "직접 입력"], ["both", "둘 다 비교"]].map(([k, v]) => (
-                <button key={k} onClick={() => setHrMode(k)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${hrMode === k ? "bg-white text-blue-700 shadow-md" : "text-gray-500"}`}>
-                  {v}
-                </button>
-              ))}
             </div>
-            {(hrMode === "custom" || hrMode === "both") && (
+
+            <div className="grid grid-cols-3 gap-2 mb-3">
               <div>
-                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">설정 시급 (원)</label>
-                <input type="number" value={customHr} min={MIN_WAGE} step={100}
-                  onChange={e => setCustomHr(parseInt(e.target.value) || MIN_WAGE)}
-                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500 font-mono text-lg font-bold" />
-                {customHr < MIN_WAGE && <p className="text-xs text-red-500 mt-1 font-bold">❌ 2026 최저임금(10,320원) 위반!</p>}
+                <label className="block text-xs font-bold text-gray-400 mb-1">출근</label>
+                <input type="time" value={wdStart} onChange={e => setWdStart(e.target.value)} className={timeC} />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 mb-1">퇴근</label>
+                <input type="time" value={wdEnd} onChange={e => setWdEnd(e.target.value)} className={timeC} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 mb-1">휴게(분)</label>
+                <input type="number" value={wdBreak} min={0} max={480} step={30}
+                  onChange={e => setWdBreak(parseInt(e.target.value) || 0)} className={timeC} />
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-xs font-bold text-gray-400 mb-2">평일 직원 수</label>
+              <Counter value={wdCount} onChange={setWdCount} />
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-3 text-xs flex flex-wrap gap-x-3 gap-y-1">
+              <span className="text-blue-700 font-bold">일 {c.wdS.workH.toFixed(1)}h</span>
+              <span className="text-blue-500">주 {c.wdS.weeklyH.toFixed(1)}h</span>
+              <span className="text-blue-500">월 기본 {c.wdS.monthlyBasicH.toFixed(1)}h</span>
+              {c.wdS.hasWL && <span className="text-emerald-600 font-bold">주휴 {c.wdS.monthlyWLH.toFixed(1)}h</span>}
+              {c.wdS.monthlyOTH > 0 && <span className="text-orange-600 font-bold">연장 {c.wdS.monthlyOTH.toFixed(1)}h</span>}
+            </div>
+          </div>
+
+          {/* 주말 근무 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b-2 border-orange-400">
+              <h3 className="text-sm font-black text-orange-700">
+                🌅 주말 근무 <span className="text-orange-400 text-xs font-normal">토·일</span>
+              </h3>
+              <button onClick={() => setHasWe(!hasWe)}
+                className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${hasWe ? "bg-orange-500" : "bg-gray-300"}`}>
+                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow ${hasWe ? "left-7" : "left-1"}`} />
+              </button>
+            </div>
+
+            {!hasWe ? (
+              <p className="text-xs text-gray-400 text-center py-3">주말 근무 없음 — 토글로 활성화</p>
+            ) : (
+              <>
+                <div className="flex gap-2 mb-3">
+                  {[["토요일 (1일)", 1], ["토+일 (2일)", 2]].map(([l, n]) => (
+                    <button key={n} onClick={() => setWeDays(n)}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${weDays === n ? "bg-orange-500 border-orange-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-orange-300"}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 bg-orange-50 rounded-xl p-3 mb-3">
+                  <button onClick={() => setWeSame(!weSame)}
+                    className={`w-10 h-5 rounded-full transition-all relative flex-shrink-0 ${weSame ? "bg-orange-500" : "bg-gray-300"}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-all shadow ${weSame ? "left-5" : "left-0.5"}`} />
+                  </button>
+                  <span className="text-xs font-bold text-orange-700">평일과 동일한 근무시간 적용</span>
+                </div>
+
+                {!weSame && (
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 mb-1">출근</label>
+                      <input type="time" value={weStart} onChange={e => setWeStart(e.target.value)} className={timeOC} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 mb-1">퇴근</label>
+                      <input type="time" value={weEnd} onChange={e => setWeEnd(e.target.value)} className={timeOC} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 mb-1">휴게(분)</label>
+                      <input type="number" value={weBreak} min={0} max={480} step={30}
+                        onChange={e => setWeBreak(parseInt(e.target.value) || 0)} className={timeOC} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mb-3">
+                  <label className="block text-xs font-bold text-gray-400 mb-2">주말 직원 수</label>
+                  <Counter value={weCount} onChange={setWeCount} />
+                </div>
+
+                {c.weS && (
+                  <div className="bg-orange-50 rounded-xl p-3 text-xs flex flex-wrap gap-x-3 gap-y-1">
+                    <span className="text-orange-700 font-bold">일 {c.weS.workH.toFixed(1)}h</span>
+                    <span className="text-orange-500">주 {c.weS.weeklyH.toFixed(1)}h</span>
+                    <span className="text-orange-500">월 기본 {c.weS.monthlyBasicH.toFixed(1)}h</span>
+                    {c.weS.hasWL && <span className="text-emerald-600 font-bold">주휴 {c.weS.monthlyWLH.toFixed(1)}h</span>}
+                  </div>
+                )}
+              </>
             )}
           </div>
+
+          {/* 기타 */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
             <h3 className="text-sm font-black text-blue-900 pb-2 mb-3 border-b-2 border-blue-500">⚙️ 기타</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">식대 비과세</label>
-                <input type="number" value={meal} step={10000} max={200000}
-                  onChange={e => setMeal(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500" />
+                <label className="block text-xs font-bold text-gray-400 mb-1">식대 비과세</label>
+                <NumberInput value={mealStr} onChange={setMealStr} className={ic} />
                 <p className="text-xs text-gray-400 mt-1">최대 200,000원</p>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-400 mb-1 uppercase">부양가족</label>
-                <select value={dep} onChange={e => setDep(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:border-blue-500">
-                  {[1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}명{n===1?" (본인만)":""}</option>)}
+                <label className="block text-xs font-bold text-gray-400 mb-1">부양가족</label>
+                <select value={dep} onChange={e => setDep(parseInt(e.target.value))} className={ic}>
+                  {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                    <option key={n} value={n}>{n}명{n === 1 ? " (본인만)" : ""}</option>
+                  ))}
                 </select>
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-slate-700 to-slate-900 text-white rounded-2xl p-4">
-            <h3 className="text-sm font-black mb-3">📊 근무시간 분석 (자동계산)</h3>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              {[["일 실근무", `${calc.dailyWorkH.toFixed(1)}h`], ["주 실근무", `${calc.weeklyWorkH.toFixed(1)}h`],
-                ["월 기본시간", `${calc.monthlyBasicH.toFixed(1)}h`],
-                ["월 주휴시간", calc.hasWL ? `${calc.monthlyWLH.toFixed(1)}h` : "미해당"],
-                ["월 연장시간", `${calc.monthlyOTH.toFixed(1)}h`], ["월 야간시간", `${calc.monthlyNightH.toFixed(1)}h`]
-              ].map(([l, v]) => (
-                <div key={l} className="bg-white bg-opacity-10 rounded-xl p-2 text-center">
-                  <div className="font-black text-base">{v}</div>
-                  <div className="text-slate-300 mt-0.5 text-xs">{l}</div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 space-y-1 text-xs">
-              {!calc.hasWL && <p className="text-yellow-300">⚠️ 주 15시간 미만 — 주휴수당 미발생</p>}
-              {calc.monthlyOTH > 0 && <p className="text-orange-300">⚡ 연장근무 가산수당(×1.5) 자동 적용</p>}
-              {calc.monthlyNightH > 0 && <p className="text-purple-300">🌙 야간가산수당(×0.5) 자동 적용</p>}
-            </div>
-          </div>
         </div>
+
+        {/* ─── 결과 패널 ─── */}
         <div className={activeTab === "result" ? "block" : "hidden md:block"}>
-          {(hrMode === "min" || hrMode === "both") && <ResultBlock r={calc.minResult} label="✅ 최저임금 기준" accent="green" />}
-          {(hrMode === "custom" || hrMode === "both") && <ResultBlock r={calc.customResult} label="⭐ 설정 시급 기준" accent="blue" />}
-          {hrMode === "both" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
-              <h3 className="text-sm font-black text-blue-900 pb-2 mb-3 border-b-2 border-blue-500">📊 최저임금 vs 설정시급 비교</h3>
-              <table className="w-full text-xs">
-                <thead><tr className="bg-gray-50">
-                  <td className="p-2.5 font-bold text-gray-400">항목</td>
-                  <td className="p-2.5 font-bold text-emerald-700 text-right">최저임금</td>
-                  <td className="p-2.5 font-bold text-blue-700 text-right">설정시급</td>
-                </tr></thead>
-                <tbody>
-                  {[["시급", fmt(calc.minResult.hrRate)+"원", fmt(calc.customResult.hrRate)+"원"],
-                    ["총 지급액", fmt(calc.minResult.gross)+"원", fmt(calc.customResult.gross)+"원"],
-                    ["실수령액", fmt(calc.minResult.net)+"원", fmt(calc.customResult.net)+"원"],
-                    ["총 공제액", fmt(calc.minResult.totDed)+"원", fmt(calc.customResult.totDed)+"원"],
-                    ["사업주 보험", fmt(calc.minResult.insR)+"원", fmt(calc.customResult.insR)+"원"],
-                    ["사업주 총비용", fmt(calc.minResult.totCost)+"원", fmt(calc.customResult.totCost)+"원"],
-                    ["시간당 인건비", fmt(calc.minResult.hrCost)+"원", fmt(calc.customResult.hrCost)+"원"],
-                  ].map(([l,a,b]) => (
-                    <tr key={l} className="border-t border-gray-50">
-                      <td className="p-2.5 text-gray-400">{l}</td>
-                      <td className="p-2.5 font-mono font-bold text-emerald-700 text-right">{a}</td>
-                      <td className="p-2.5 font-mono font-bold text-blue-700 text-right">{b}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                💡 월 차액 (사업주 기준):&nbsp;
-                <span className="font-black text-amber-900">
-                  {fmt(Math.abs(calc.customResult.totCost - calc.minResult.totCost))}원
-                  {calc.customResult.totCost > calc.minResult.totCost ? " 추가 부담" : " 절감"}
-                </span>
+
+          <InsuranceCard
+            r={c.wdR}
+            count={c.wdN}
+            label={`📅 평일 직원 · 주 ${wdDays}일`}
+            isOrange={false}
+          />
+
+          {hasWe && c.weR && (
+            <InsuranceCard
+              r={c.weR}
+              count={c.weN}
+              label={`🌅 주말 직원 · 주 ${weDays}일`}
+              isOrange={true}
+            />
+          )}
+
+          {/* 전체 합산 */}
+          {hasWe && c.weR && (
+            <div className="bg-gradient-to-br from-slate-700 to-slate-900 text-white rounded-2xl p-4 mb-4">
+              <h3 className="text-sm font-black mb-1">📊 전체 합산</h3>
+              <p className="text-xs text-slate-400 mb-3">평일 {c.wdN}명 + 주말 {c.weN}명 = 총 {c.wdN + c.weN}명</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ["💼 월 총 인건비", c.total.totCost, "text-yellow-300"],
+                  ["🏢 사업주 보험 합계", c.total.insR, "text-red-300"],
+                  ["💚 월 총 실수령", c.total.net, "text-green-300"],
+                  ["📋 총 지급(세전)", c.total.gross, "text-blue-300"],
+                ].map(([l, v, col]) => (
+                  <div key={l} className="bg-white bg-opacity-10 rounded-xl p-3 text-center">
+                    <div className={`text-base font-black font-mono ${col}`}>{fmt(v)}<span className="text-xs">원</span></div>
+                    <div className="text-slate-300 text-xs mt-0.5">{l}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
+
+          {/* 법적 기준 */}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-gray-400 leading-loose">
             <p className="font-bold text-gray-600 mb-1">📌 2026년 법적 기준</p>
             <p>• 최저임금 <strong className="text-gray-700">10,320원</strong> / 최저월급 2,156,880원 (209h)</p>
@@ -367,6 +533,7 @@ export default function App() {
             <p>• 소득세는 간이세액표 기준 추정치 · 정확한 처리는 노무사 확인 권장</p>
           </div>
         </div>
+
       </div>
     </div>
   );
