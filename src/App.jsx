@@ -333,34 +333,42 @@ function ColInsurance({ c, hasWe, wdDays, weDays }) {
           </div>
 
           {/* 사업주 4대보험 명세 */}
-          <div className={`rounded-lg p-2.5 border ${a.insBox}`}>
-            <div className="text-xs font-black text-gray-700 mb-1.5">🏢 사업주 부담 명세</div>
-            {[["국민연금","4.75%",r.npR],["건강보험","3.595%",r.hiR],["장기요양","×13.14%",r.ltR],["고용보험","1.05%",r.eiR],["산재보험","1.47%",r.wiR]].map(([name,rate,v])=>(
-              <div key={name} className={`flex items-center gap-1 text-xs py-0.5 px-1 rounded ${a.row}`}>
-                <span className="text-gray-500 w-12 flex-shrink-0">{name}</span>
-                <span className={`text-xs px-1 rounded font-mono flex-shrink-0 ${a.tag}`}>{rate}</span>
-                <span className="font-mono font-bold text-red-500 ml-auto">{fmt(v)}원</span>
-              </div>
-            ))}
-            <div className="flex justify-between text-xs font-black pt-1.5 mt-1 border-t border-gray-200">
-              <span className="text-gray-700">부담 합계</span>
-              <span className="font-mono text-red-600">{fmt(r.insR)}원</span>
-            </div>
+          <div className={`rounded-lg border ${a.insBox} overflow-hidden`}>
+            <div className="text-xs font-black text-gray-700 px-3 py-2 border-b border-gray-100">🏢 사업주 부담 명세</div>
+            <table className="w-full text-xs">
+              <tbody>
+                {[["국민연금","4.75%",r.npR],["건강보험","3.595%",r.hiR],["장기요양","×13.14%",r.ltR],["고용보험","1.05%",r.eiR],["산재보험","1.47%",r.wiR]].map(([name,rate,v])=>(
+                  <tr key={name} className={`border-b border-gray-50 ${a.row}`}>
+                    <td className="py-1.5 pl-3 text-gray-500 w-16">{name}</td>
+                    <td className="py-1.5 px-1"><span className={`px-1.5 py-0.5 rounded font-mono text-xs ${a.tag}`}>{rate}</span></td>
+                    <td className="py-1.5 pr-3 text-right font-mono font-bold text-red-500 tabular-nums">{fmt(v)}원</td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-50">
+                  <td colSpan={2} className="py-1.5 pl-3 font-black text-gray-700">부담 합계</td>
+                  <td className="py-1.5 pr-3 text-right font-mono font-black text-red-600 tabular-nums">{fmt(r.insR)}원</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* 근로자 공제 */}
-          <div className="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-            <div className="text-xs font-black text-gray-600 mb-1">👤 근로자 공제</div>
-            {[["4대보험(근로자)",r.insE],["소득세+지방세",r.itax+r.ltax]].map(([l,v])=>(
-              <div key={l} className="flex justify-between text-xs py-0.5">
-                <span className="text-gray-400">{l}</span>
-                <span className="font-mono font-semibold text-gray-500">-{fmt(v)}원</span>
-              </div>
-            ))}
-            <div className="flex justify-between text-xs font-bold pt-1 mt-0.5 border-t border-gray-100">
-              <span className="text-gray-600">공제 합계</span>
-              <span className="font-mono text-gray-600">-{fmt(r.totDed)}원</span>
-            </div>
+          <div className="bg-gray-50 border border-gray-100 rounded-lg overflow-hidden">
+            <div className="text-xs font-black text-gray-600 px-3 py-2 border-b border-gray-100">👤 근로자 공제</div>
+            <table className="w-full text-xs">
+              <tbody>
+                {[["4대보험(근로자)",r.insE],["소득세+지방세",r.itax+r.ltax]].map(([l,v])=>(
+                  <tr key={l} className="border-b border-gray-100">
+                    <td className="py-1.5 pl-3 text-gray-400">{l}</td>
+                    <td className="py-1.5 pr-3 text-right font-mono font-semibold text-gray-500 tabular-nums">-{fmt(v)}원</td>
+                  </tr>
+                ))}
+                <tr className="bg-white">
+                  <td className="py-1.5 pl-3 font-bold text-gray-600">공제 합계</td>
+                  <td className="py-1.5 pr-3 text-right font-mono font-bold text-gray-600 tabular-nums">-{fmt(r.totDed)}원</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {count>1&&(
@@ -464,31 +472,37 @@ function ColEstimate({ c, hasWe, totalPeople, set, parkingInsStr, setParkingInsS
           </div>
           <p className="text-xs text-slate-500 mt-1">급여 + 보험 + 퇴직금 + 추가항목</p>
         </div>
-        <div className="p-3 space-y-1.5">
-          {rows.map(([l,v,col,bg],i)=>(
-            <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2 ${bg} bg-opacity-30`}>
-              <span className="text-xs text-slate-300">{l}</span>
-              <span className={`font-mono font-black text-sm ${col}`}>{fmt(v)}<span className="text-xs opacity-70">원</span></span>
-            </div>
-          ))}
-          <div className="border-t border-white border-opacity-20 pt-2 mt-1">
+        <div className="p-3">
+          <table className="w-full text-xs mb-2">
+            <tbody>
+              {rows.map(([l,v,col,bg],i)=>(
+                <tr key={i} className={`${bg} bg-opacity-30 rounded-lg`}>
+                  <td className="py-2 pl-3 text-slate-300 rounded-l-lg">{l}</td>
+                  <td className={`py-2 pr-3 text-right font-mono font-black text-sm ${col} tabular-nums rounded-r-lg`}>{fmt(v)}<span className="text-xs opacity-70">원</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="border-t border-white border-opacity-20 pt-2">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-black text-slate-300">🧾 합계</span>
-              <span className="text-xl font-black font-mono text-yellow-300">{fmt(c.estimate)}<span className="text-xs">원</span></span>
+              <span className="text-xl font-black font-mono text-yellow-300 tabular-nums">{fmt(c.estimate)}<span className="text-xs">원</span></span>
             </div>
-            <div className="space-y-1.5">
-              {[
-                ["📅 연간 견적 (×12)", fmt(c.estimate*12)+"원",                                           "text-yellow-200"],
-                ["👤 1인 월평균",      fmt(c.estimate/Math.max(1,totalPeople))+"원",                      "text-blue-200"],
-                ["🏢 총 사업주 부담",  fmt(c.totalInsR+c.totalRetire+c.clientIns+c.support)+"원",        "text-red-200"],
-                ["💚 총 실수령 합계",  fmt(c.totalNet)+"원",                                              "text-emerald-200"],
-              ].map(([l,v,col])=>(
-                <div key={l} className="flex justify-between items-center bg-white bg-opacity-5 rounded-lg px-3 py-2">
-                  <span className="text-xs text-slate-400">{l}</span>
-                  <span className={`text-xs font-black font-mono ${col}`}>{v}</span>
-                </div>
-              ))}
-            </div>
+            <table className="w-full text-xs">
+              <tbody>
+                {[
+                  ["📅 연간 견적 (×12)", fmt(c.estimate*12)+"원",                                    "text-yellow-200"],
+                  ["👤 1인 월평균",      fmt(c.estimate/Math.max(1,totalPeople))+"원",               "text-blue-200"],
+                  ["🏢 총 사업주 부담",  fmt(c.totalInsR+c.totalRetire+c.clientIns+c.support)+"원", "text-red-200"],
+                  ["💚 총 실수령 합계",  fmt(c.totalNet)+"원",                                       "text-emerald-200"],
+                ].map(([l,v,col])=>(
+                  <tr key={l} className="bg-white bg-opacity-5 rounded-lg">
+                    <td className="py-1.5 pl-3 text-slate-400 rounded-l-lg">{l}</td>
+                    <td className={`py-1.5 pr-3 text-right font-black font-mono tabular-nums ${col} rounded-r-lg`}>{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
