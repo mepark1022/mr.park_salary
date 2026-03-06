@@ -70,7 +70,7 @@ const newWeekendGroup=()=>newGroup({id:gid++,label:"주말(토·일)",daysPerWee
 
 function QuoteTab(){
   const [site,setSite]=useState({name:"",date:today(),contractType:"월~금",contractPeriod:"기본 1년",hours:"09:00~18:00",staffCount:"1명",workType:"주5일",note:""});
-  const [groups,setGroups]=useState([newGroup()]);
+  const [groups,setGroups]=useState([newGroup(), {id:gid++,label:"주말(토·일)",daysPerWeek:2,start:"09:00",end:"18:00",breakMin:60,headcount:1,monthlySalary:1500000}]);
   const [support,setSupport]=useState({amt:2000000,desc:"리스크대비 및 운영 관리비용"});
   // 주차대행보험료 — 항상 표시
   const [valetIns,setValetIns]=useState({amt:700000,desc:"본관 + 공도 주차장 및 공영 (공도보험필요)"});
