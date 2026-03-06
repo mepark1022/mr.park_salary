@@ -12,6 +12,9 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          npm install -g vercel
-          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --yes
+          npm install -g vercel@latest
+          vercel --token $VERCEL_TOKEN --prod --yes
