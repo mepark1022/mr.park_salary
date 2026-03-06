@@ -65,20 +65,19 @@ const ResultBlock=({r,label,scheme})=>{
    견적서 탭 — 실제 폼 형태 그대로 + 하단 입력 패널
 ══════════════════════════════════════════════════════ */
 let gid=1;
-const newGroup=()=>({id:gid++,label:"주5일(평일)",daysPerWeek:5,start:"09:00",end:"18:00",breakMin:60,headcount:1,monthlySalary:2000000,insDesc:"",extraDesc:""});
+const newGroup=(preset={})=>({id:gid++,label:"주5일(평일)",daysPerWeek:5,start:"09:00",end:"18:00",breakMin:60,headcount:1,monthlySalary:2000000,...preset});
+const newWeekendGroup=()=>newGroup({id:gid++,label:"주말(토·일)",daysPerWeek:2,start:"09:00",end:"18:00",breakMin:60,headcount:1,monthlySalary:1500000});
 
 function QuoteTab(){
-  /* 하단 입력 상태 */
   const [site,setSite]=useState({name:"",date:today(),contractType:"월~금",contractPeriod:"기본 1년",hours:"09:00~18:00",staffCount:"1명",workType:"주5일",note:""});
   const [groups,setGroups]=useState([newGroup()]);
   const [support,setSupport]=useState({amt:2000000,desc:"리스크대비 및 운영 관리비용"});
-  const [insurance,setInsurance]=useState({amt:0,desc:"(주차장 + 이면도로 보험) 발렛전용 보험"});
+  // 주차대행보험료 — 항상 표시
+  const [valetIns,setValetIns]=useState({amt:700000,desc:"본관 + 공도 주차장 및 공영 (공도보험필요)"});
   const [extras,setExtras]=useState([]);
-  const [discount,setDiscount]=useState({type:"none",amt:0,rate:0});
+  // 에누리 — 직접 입력 금액
+  const [discAmt,setDiscAmt]=useState(0);
   const [ops,setOps]=useState(["주차부스 사용 조건 (중고부스 구입및 설치 / 당사기증 / 당사비용)","전기사용필요 (고객사 여건 제공)","",""]);
-
-  const inp="w-full px-2 py-1.5 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:border-blue-400 transition-all";
-  const inpNum="w-full px-2 py-1.5 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:border-blue-400 transition-all font-mono text-right";
 
   const groupCalcs=useMemo(()=>groups.map(g=>{
     const h=calcMonthlyHours(g.start,g.end,g.breakMin,g.daysPerWeek);
@@ -90,418 +89,319 @@ function QuoteTab(){
   }),[groups]);
 
   const summary=useMemo(()=>{
-    const laborTotal=groupCalcs.reduce((s,c,i)=>s+c.rowTotal,0);
+    const laborTotal=groupCalcs.reduce((s,c)=>s+c.rowTotal,0);
     const supportAmt=parseInt(support.amt)||0;
-    const insAmt=parseInt(insurance.amt)||0;
+    const insAmt=parseInt(valetIns.amt)||0;
     const extAmt=extras.reduce((s,e)=>s+(parseInt(e.amt)||0),0);
     const raw=laborTotal+supportAmt+insAmt+extAmt;
-    let final=raw;
-    if(discount.type==="amt") final=Math.max(0,raw-(parseInt(discount.amt)||0));
-    if(discount.type==="rate") final=Math.round(raw*(1-(parseFloat(discount.rate)||0)/100));
-    const discAmt=raw-final;
-    const salarySum=groups.reduce((s,g,i)=>s+g.monthlySalary*g.headcount,0);
+    const disc=parseInt(discAmt)||0;
+    const final=Math.max(0,raw-disc);
+    const salarySum=groups.reduce((s,g)=>s+g.monthlySalary*g.headcount,0);
     const ins4Sum=groupCalcs.reduce((s,c,i)=>s+c.ins.total*groups[i].headcount,0);
     const retireSum=groupCalcs.reduce((s,c,i)=>s+c.retire*groups[i].headcount,0);
-    return {laborTotal,supportAmt,insAmt,extAmt,raw,final,discAmt,salarySum,ins4Sum,retireSum};
-  },[groupCalcs,groups,support,insurance,extras,discount]);
+    return {laborTotal,supportAmt,insAmt,extAmt,raw,final,disc,salarySum,ins4Sum,retireSum};
+  },[groupCalcs,groups,support,valetIns,extras,discAmt]);
 
   const updateGroup=(id,p)=>setGroups(gs=>gs.map(g=>g.id===id?{...g,...p}:g));
   const addGroup=()=>setGroups(gs=>[...gs,newGroup()]);
+  const addWeekend=()=>setGroups(gs=>[...gs,newWeekendGroup()]);
   const removeGroup=(id)=>setGroups(gs=>gs.filter(g=>g.id!==id));
 
-  /* ── 셀 인풋 (폼 내부용 — 투명 배경, 폼 스타일 유지) ── */
-  const CellInput=({value,onChange,placeholder="",align="left",className=""})=>(
+  // 운영지원금 아래 서브행 수 (보험료 항상 + 기타들)
+  const supportSubRows=1+extras.length; // 보험료 1행 항상 + 기타
+
+  /* 셀 인풋 */
+  const CI=({value,onChange,placeholder="",cls=""})=>(
     <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-      className={`w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 text-xs px-0 py-0.5 ${align==="right"?"text-right font-mono":""} ${className}`}/>
+      className={`w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 text-xs px-0 py-0.5 leading-tight ${cls}`}/>
   );
-  const CellNum=({value,onChange,placeholder=""})=>(
+  const CN=({value,onChange,placeholder=""})=>(
     <input type="number" value={value||""} onChange={e=>onChange(parseInt(e.target.value)||0)} placeholder={placeholder}
       className="w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 text-xs text-right font-mono px-0 py-0.5"/>
   );
 
   return(
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-black text-gray-800">📋 견적서 작성 · 미리보기</h2>
-        <button onClick={()=>window.print()}
-          className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-700 transition-all print:hidden">
-          🖨️ 인쇄 / PDF 저장
-        </button>
+        <button onClick={()=>window.print()} className="px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-700 transition-all print:hidden">🖨️ 인쇄 / PDF</button>
       </div>
 
-      {/* ════════════════════════════════════
-          실제 견적서 폼 (PDF와 동일 레이아웃)
-      ════════════════════════════════════ */}
-      <div className="bg-white border border-gray-300 rounded-xl overflow-hidden shadow-lg print:shadow-none print:border-gray-400" id="quote-form">
+      {/* ══ 견적서 폼 ══ */}
+      <div className="bg-white border border-gray-300 rounded-xl overflow-hidden shadow-lg print:shadow-none print:rounded-none" id="quote-form">
 
         {/* 헤더 */}
-        <div className="px-8 pt-6 pb-4 border-b-2 border-gray-800 flex items-end justify-between">
+        <div className="px-6 pt-5 pb-3 border-b-2 border-gray-800 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">주차관리 서비스 견적서</h1>
-            <p className="text-xs text-gray-400 mt-1">최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다.</p>
-            <p className="text-xs text-gray-400">언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.</p>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">주차관리 서비스 견적서</h1>
+            <p className="text-xs text-gray-400 mt-0.5">최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다. 언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.</p>
           </div>
-          <div className="text-right">
-            <div className="border-2 border-gray-800 px-3 py-1.5 rounded">
-              <p className="text-xs font-black text-gray-700 tracking-wider">VALETMAN</p>
-              <p className="text-xs font-bold text-gray-500 tracking-widest">MEMBERS</p>
-            </div>
+          <div className="border-2 border-gray-800 px-3 py-1.5 rounded ml-4 flex-shrink-0">
+            <p className="text-xs font-black text-gray-700 tracking-wider text-center">VALETMAN</p>
+            <p className="text-xs font-bold text-gray-500 tracking-widest text-center">MEMBERS</p>
           </div>
         </div>
 
-        {/* 기본 정보 테이블 */}
-        <div className="px-8 py-3">
-          <table className="w-full text-xs border border-gray-300">
+        {/* 기본정보 */}
+        <div className="px-6 py-2">
+          <table className="w-full border border-gray-300" style={{fontSize:"11px"}}>
             <tbody>
-              {[
-                [["현장명","name"],["상호명",null,"㈜미스터팍"]],
-                [["견적일","date"],["대표",null,"이지섭"]],
-                [["계약형태","contractType"],["등록번호",null,"102-88-01109"]],
-                [["계약기간","contractPeriod"],["주소",null,"인천광역시 연수구 갯벌로 12, 인천TP 갯벌타워 1501호"]],
-                [["운영시간","hours"],["전화",null,"1899-1871"]],
-              ].map(([left,right],ri)=>(
+              {[[["현장명","name"],["상호명",null,"㈜미스터팍"]],[["견적일","date"],["대표",null,"이지섭"]],[["계약형태","contractType"],["등록번호",null,"102-88-01109"]],[["계약기간","contractPeriod"],["주소",null,"인천광역시 연수구 갯벌로 12, 인천TP 갯벌타워 1501호"]],[["운영시간","hours"],["전화",null,"1899-1871"]]].map(([L,R],ri)=>(
                 <tr key={ri} className="border-b border-gray-200 last:border-0">
-                  <td className="bg-gray-50 px-3 py-1.5 font-bold text-gray-600 w-20 border-r border-gray-200">{left[0]}</td>
-                  <td className="px-3 py-1 border-r border-gray-200 w-2/5">
-                    {left[1]?<CellInput value={site[left[1]]} onChange={v=>setSite(p=>({...p,[left[1]]:v}))} placeholder={left[0]}/>:<span className="text-gray-700">{left[2]}</span>}
-                  </td>
-                  <td className="bg-gray-50 px-3 py-1.5 font-bold text-gray-600 w-20 border-r border-gray-200">{right[0]}</td>
-                  <td className="px-3 py-1">
-                    {right[1]?<CellInput value={site[right[1]]} onChange={v=>setSite(p=>({...p,[right[1]]:v}))} placeholder={right[0]}/>:<span className="text-gray-500">{right[2]}</span>}
-                  </td>
+                  <td className="bg-gray-50 px-2 py-1 font-bold text-gray-600 w-16 border-r border-gray-200 whitespace-nowrap">{L[0]}</td>
+                  <td className="px-2 py-1 border-r border-gray-200 w-[38%]">{L[1]?<CI value={site[L[1]]} onChange={v=>setSite(p=>({...p,[L[1]]:v}))} placeholder={L[0]}/>:<span className="text-gray-700 font-bold">{L[2]}</span>}</td>
+                  <td className="bg-gray-50 px-2 py-1 font-bold text-gray-600 w-16 border-r border-gray-200 whitespace-nowrap">{R[0]}</td>
+                  <td className="px-2 py-1">{R[1]?<CI value={site[R[1]]} onChange={v=>setSite(p=>({...p,[R[1]]:v}))} placeholder={R[0]}/>:<span className="text-gray-500">{R[2]}</span>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* 발렛요원 운영방안 */}
-        <div className="px-8 py-2">
-          <p className="text-xs font-black text-gray-700 mb-2">· 발렛요원 운영방안</p>
-          <table className="w-full text-xs border border-gray-300">
+        {/* 운영방안 */}
+        <div className="px-6 py-1.5">
+          <p style={{fontSize:"11px"}} className="font-black text-gray-700 mb-1">· 발렛요원 운영방안</p>
+          <table className="w-full border border-gray-300" style={{fontSize:"11px"}}>
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-3 py-2 text-center font-bold text-gray-600 border-r border-gray-200 w-24">필요인원</th>
-                <th className="px-3 py-2 text-center font-bold text-gray-600 border-r border-gray-200 w-24">근무기준</th>
-                <th className="px-3 py-2 text-center font-bold text-gray-600 border-r border-gray-200 w-28">근무형태</th>
-                <th className="px-3 py-2 text-center font-bold text-gray-600">비고</th>
+                {["필요인원","근무기준","근무형태","비고"].map(h=>(
+                  <th key={h} className="px-2 py-1.5 font-bold text-gray-600 border-r border-gray-200 last:border-0 text-center">{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               <tr className="border-t border-gray-200">
-                <td className="px-3 py-2 text-center border-r border-gray-200">
-                  <CellInput value={site.staffCount} onChange={v=>setSite(p=>({...p,staffCount:v}))} placeholder="예: 평일 2명" align="center" className="text-center"/>
-                </td>
-                <td className="px-3 py-2 text-center border-r border-gray-200">
-                  <CellInput value={site.workType} onChange={v=>setSite(p=>({...p,workType:v}))} placeholder="전일제" align="center" className="text-center"/>
-                </td>
-                <td className="px-3 py-2 text-center border-r border-gray-200">
-                  <CellInput value={site.contractType} onChange={v=>setSite(p=>({...p,contractType:v}))} placeholder="주5일" align="center" className="text-center"/>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="space-y-0.5">
-                    {ops.map((op,i)=>(
-                      <CellInput key={i} value={op} onChange={v=>setOps(o=>o.map((x,j)=>j===i?v:x))} placeholder={`비고 ${i+1}`}/>
-                    ))}
-                  </div>
-                </td>
+                <td className="px-2 py-1.5 border-r border-gray-200 text-center"><CI value={site.staffCount} onChange={v=>setSite(p=>({...p,staffCount:v}))} placeholder="예: 평일2명" cls="text-center"/></td>
+                <td className="px-2 py-1.5 border-r border-gray-200 text-center"><CI value={site.workType} onChange={v=>setSite(p=>({...p,workType:v}))} placeholder="전일제" cls="text-center"/></td>
+                <td className="px-2 py-1.5 border-r border-gray-200 text-center"><CI value={site.contractType} onChange={v=>setSite(p=>({...p,contractType:v}))} placeholder="주5일" cls="text-center"/></td>
+                <td className="px-2 py-1.5">{ops.map((op,i)=><CI key={i} value={op} onChange={v=>setOps(o=>o.map((x,j)=>j===i?v:x))} placeholder={`비고 ${i+1}`}/>)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* 월 견적비용 메인 테이블 */}
-        <div className="px-8 py-2">
-          <div className="flex justify-between items-baseline mb-2">
-            <p className="text-xs font-black text-gray-700">· 월 견적비용 <span className="text-gray-400 font-normal">(vat별도)</span></p>
-            <p className="text-xs text-gray-400">(원)</p>
+        {/* 월 견적비용 */}
+        <div className="px-6 py-1.5">
+          <div className="flex justify-between items-baseline mb-1">
+            <p style={{fontSize:"11px"}} className="font-black text-gray-700">· 월 견적비용 <span className="text-gray-400 font-normal">(vat별도)</span></p>
+            <p style={{fontSize:"10px"}} className="text-gray-400">(원)</p>
           </div>
-          <table className="w-full text-xs border border-gray-300">
+          <table className="w-full border border-gray-300" style={{fontSize:"11px"}}>
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-3 py-2 text-center font-bold text-gray-600 border-r border-gray-200 w-20">항목</th>
-                <th className="px-3 py-2 text-center font-bold text-gray-600 border-r border-gray-200 w-24">구분</th>
-                <th className="px-3 py-2 text-right font-bold text-gray-600 border-r border-gray-200 w-28">견적금액</th>
-                <th className="px-3 py-2 text-right font-bold text-gray-600 border-r border-gray-200 w-24">4대보험</th>
-                <th className="px-3 py-2 text-right font-bold text-gray-600 border-r border-gray-200 w-24">퇴직충담금</th>
-                <th className="px-3 py-2 text-right font-bold text-gray-600 w-28">금액</th>
+                <th className="px-2 py-1.5 font-bold text-gray-600 border-r border-gray-200 w-16 text-center">항목</th>
+                <th className="px-2 py-1.5 font-bold text-gray-600 border-r border-gray-200 text-center">구분</th>
+                <th className="px-2 py-1.5 font-bold text-gray-600 border-r border-gray-200 w-28 text-right">견적금액</th>
+                <th className="px-2 py-1.5 font-bold text-gray-600 border-r border-gray-200 w-22 text-right">4대보험</th>
+                <th className="px-2 py-1.5 font-bold text-gray-600 border-r border-gray-200 w-22 text-right">퇴직충담금</th>
+                <th className="px-2 py-1.5 font-bold text-gray-600 w-28 text-right">금액</th>
               </tr>
             </thead>
             <tbody>
-              {/* ─ 인건비 행들 ─ */}
+
+              {/* ── 인건비 그룹들 ── */}
               {groups.map((g,gi)=>{
                 const c=groupCalcs[gi];
                 return(
-                  <tr key={g.id} className="border-t border-gray-200 hover:bg-blue-50/30 transition-colors">
-                    {/* 항목 셀 - 첫 행만 '인건비' 표기, rowSpan */}
+                  <tr key={g.id} className="border-t border-gray-200">
                     {gi===0&&(
-                      <td className="px-3 py-2 font-bold text-gray-800 border-r border-gray-200 text-center align-middle" rowSpan={groups.length}>
-                        인건비
-                        {groups.length>1&&(
-                          <div className="mt-1">
-                            <button onClick={addGroup} className="text-blue-400 text-xs block w-full print:hidden">+추가</button>
-                          </div>
-                        )}
-                      </td>
+                      <td className="px-2 py-1.5 font-bold text-gray-800 border-r border-gray-200 text-center align-middle" rowSpan={groups.length}>인건비</td>
                     )}
-                    {/* 구분 */}
-                    <td className="px-2 py-2 border-r border-gray-200">
-                      <CellInput value={g.label} onChange={v=>updateGroup(g.id,{label:v})} placeholder="구분"/>
-                      {/* 시간 설정 인라인 */}
-                      <div className="flex gap-1 mt-1 items-center print:hidden">
+                    {/* 구분: 구분명 + 시간설정 한 줄 */}
+                    <td className="px-2 py-1.5 border-r border-gray-200">
+                      <CI value={g.label} onChange={v=>updateGroup(g.id,{label:v})} placeholder="구분명"/>
+                      {/* 시간설정 — 한 줄, print 숨김 */}
+                      <div className="flex items-center gap-1 mt-0.5 print:hidden flex-wrap">
                         <select value={g.daysPerWeek} onChange={e=>updateGroup(g.id,{daysPerWeek:parseInt(e.target.value)})}
-                          className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:outline-none focus:border-blue-400">
+                          className="border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:outline-none" style={{fontSize:"10px"}}>
                           {[1,2,3,4,5,6,7].map(n=><option key={n} value={n}>주{n}일</option>)}
                         </select>
-                        <input type="time" value={g.start} onChange={e=>updateGroup(g.id,{start:e.target.value})} className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:outline-none w-20"/>
-                        <span className="text-gray-300">~</span>
-                        <input type="time" value={g.end} onChange={e=>updateGroup(g.id,{end:e.target.value})} className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:outline-none w-20"/>
-                      </div>
-                      <div className="text-gray-400 text-xs mt-0.5 print:hidden">
-                        유급 {c.totalPaid.toFixed(1)}h · 시급 <span className={`font-bold ${c.hrRate<MIN_WAGE?"text-red-500":"text-blue-600"}`}>{fmt(c.hrRate)}원</span>
-                        {c.hrRate<MIN_WAGE&&<span className="text-red-500 ml-1">⚠최저임금미달</span>}
+                        <input type="time" value={g.start} onChange={e=>updateGroup(g.id,{start:e.target.value})} className="border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:outline-none w-[72px]" style={{fontSize:"10px"}}/>
+                        <span className="text-gray-300" style={{fontSize:"10px"}}>~</span>
+                        <input type="time" value={g.end} onChange={e=>updateGroup(g.id,{end:e.target.value})} className="border border-gray-200 rounded px-1 py-0.5 bg-gray-50 focus:outline-none w-[72px]" style={{fontSize:"10px"}}/>
+                        <span className="text-gray-400" style={{fontSize:"10px"}}>휴{g.breakMin}분</span>
+                        <span className={`font-bold ml-1 ${c.hrRate<MIN_WAGE?"text-red-500":"text-blue-600"}`} style={{fontSize:"10px"}}>→ {fmt(c.hrRate)}원/h {c.hrRate<MIN_WAGE?"⚠최저임금미달":""}</span>
+                        {groups.length>1&&<button onClick={()=>removeGroup(g.id)} className="text-red-300 hover:text-red-500 ml-auto" style={{fontSize:"10px"}}>✕</button>}
                       </div>
                     </td>
-                    {/* 견적금액 (월급여) */}
-                    <td className="px-2 py-2 border-r border-gray-200">
-                      <CellNum value={g.monthlySalary} onChange={v=>updateGroup(g.id,{monthlySalary:v})} placeholder="월급여"/>
-                      <div className="text-gray-400 text-xs mt-0.5 print:hidden">× {g.headcount}명</div>
+                    {/* 견적금액 (월급여) + 인원조정 */}
+                    <td className="px-2 py-1.5 border-r border-gray-200 align-top">
+                      <CN value={g.monthlySalary} onChange={v=>updateGroup(g.id,{monthlySalary:v})} placeholder="월급여"/>
+                      <div className="flex items-center justify-end gap-1 mt-0.5 print:hidden">
+                        <button onClick={()=>updateGroup(g.id,{headcount:Math.max(1,g.headcount-1)})} className="w-4 h-4 rounded border border-gray-300 text-gray-500 flex items-center justify-center hover:border-blue-400" style={{fontSize:"10px"}}>−</button>
+                        <span className="font-bold text-gray-700 w-5 text-center" style={{fontSize:"10px"}}>{g.headcount}명</span>
+                        <button onClick={()=>updateGroup(g.id,{headcount:g.headcount+1})} className="w-4 h-4 rounded border border-gray-300 text-gray-500 flex items-center justify-center hover:border-blue-400" style={{fontSize:"10px"}}>+</button>
+                      </div>
                     </td>
                     {/* 4대보험 자동 */}
-                    <td className="px-2 py-2 border-r border-gray-200 text-right">
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-right align-top">
                       <span className="font-mono text-orange-500">{fmt(c.ins.total)}</span>
-                      <div className="text-gray-300 text-xs mt-0.5 print:hidden">자동계산</div>
+                      <div className="text-gray-300 print:hidden" style={{fontSize:"9px"}}>자동계산</div>
                     </td>
                     {/* 퇴직충당금 자동 */}
-                    <td className="px-2 py-2 border-r border-gray-200 text-right">
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-right align-top">
                       <span className="font-mono text-amber-600">{fmt(c.retire)}</span>
-                      <div className="text-gray-300 text-xs mt-0.5 print:hidden">월급÷12</div>
+                      <div className="text-gray-300 print:hidden" style={{fontSize:"9px"}}>월급÷12</div>
                     </td>
-                    {/* 금액 (합계) */}
-                    <td className="px-2 py-2 text-right">
+                    {/* 금액 */}
+                    <td className="px-2 py-1.5 text-right align-top">
                       <span className="font-mono font-bold text-gray-800">{fmt(c.rowTotal)}</span>
-                      {g.headcount>1&&<div className="text-gray-400 text-xs mt-0.5">{g.headcount}인 합산</div>}
-                      {groups.length>1&&(
-                        <button onClick={()=>removeGroup(g.id)} className="text-red-300 text-xs block ml-auto mt-0.5 print:hidden">✕</button>
-                      )}
+                      {g.headcount>1&&<div className="text-gray-400" style={{fontSize:"9px"}}>{g.headcount}인 합산</div>}
                     </td>
                   </tr>
                 );
               })}
 
-              {/* 인건비 추가 버튼 행 */}
+              {/* 인건비 추가 버튼들 */}
               <tr className="border-t border-dashed border-gray-200 print:hidden">
-                <td colSpan={6} className="px-3 py-1.5">
-                  <button onClick={addGroup} className="text-blue-500 text-xs font-bold hover:text-blue-700 transition-colors">
-                    + 인건비 구분 추가 (평일/주말/교대 분리)
-                  </button>
-                </td>
-              </tr>
-
-              {/* 인원 조정 행 */}
-              <tr className="border-t border-dashed border-blue-100 bg-blue-50/30 print:hidden">
-                <td className="px-3 py-1.5 text-blue-500 text-xs font-bold border-r border-gray-200">인원 조정</td>
-                <td colSpan={5} className="px-3 py-1.5">
-                  <div className="flex flex-wrap gap-3">
-                    {groups.map((g,gi)=>(
-                      <div key={g.id} className="flex items-center gap-1.5">
-                        <span className="text-xs text-gray-500">{g.label}:</span>
-                        <button onClick={()=>updateGroup(g.id,{headcount:Math.max(1,g.headcount-1)})} className="w-5 h-5 rounded border border-gray-300 text-gray-600 text-xs flex items-center justify-center hover:border-blue-400">−</button>
-                        <span className="text-xs font-bold text-gray-800 w-6 text-center">{g.headcount}명</span>
-                        <button onClick={()=>updateGroup(g.id,{headcount:g.headcount+1})} className="w-5 h-5 rounded border border-gray-300 text-gray-600 text-xs flex items-center justify-center hover:border-blue-400">+</button>
-                      </div>
-                    ))}
+                <td colSpan={6} className="px-2 py-1 bg-gray-50">
+                  <div className="flex gap-2">
+                    <button onClick={addGroup} className="text-blue-500 font-bold hover:text-blue-700" style={{fontSize:"10px"}}>+ 평일 추가</button>
+                    <button onClick={addWeekend} className="text-violet-500 font-bold hover:text-violet-700" style={{fontSize:"10px"}}>+ 주말(토·일) 추가</button>
+                    <button onClick={()=>setGroups(gs=>[...gs,newGroup({id:gid++,label:"야간(22~06시)",start:"22:00",end:"06:00",breakMin:60,daysPerWeek:5,monthlySalary:2000000})])} className="text-gray-500 font-bold hover:text-gray-700" style={{fontSize:"10px"}}>+ 교대 추가</button>
                   </div>
                 </td>
               </tr>
 
-              {/* 운영지원금 */}
-              <tr className="border-t-2 border-gray-300">
-                <td className="px-3 py-2 font-bold text-gray-800 border-r border-gray-200 text-center" rowSpan={insurance.amt>0||extras.length>0?2+extras.length:1}>운영지원금</td>
-                <td className="px-2 py-2 border-r border-gray-200" colSpan={4}>
-                  <CellInput value={support.desc} onChange={v=>setSupport(p=>({...p,desc:v}))} placeholder="운영지원금 내용"/>
+              {/* ── 운영지원금 (rowSpan: 1 리스크+운영 + 1 주차대행보험료 + extras) ── */}
+              <tr className="border-t-2 border-gray-400">
+                <td className="px-2 py-1.5 font-bold text-gray-800 border-r border-gray-200 text-center align-middle" rowSpan={1+supportSubRows}>운영지원금</td>
+                <td className="px-2 py-1.5 border-r border-gray-200" colSpan={4}>
+                  <CI value={support.desc} onChange={v=>setSupport(p=>({...p,desc:v}))} placeholder="운영지원금 내용"/>
                 </td>
-                <td className="px-2 py-2 text-right">
-                  <CellNum value={support.amt} onChange={v=>setSupport(p=>({...p,amt:v}))} placeholder="0"/>
+                <td className="px-2 py-1.5 text-right">
+                  <CN value={support.amt} onChange={v=>setSupport(p=>({...p,amt:v}))} placeholder="0"/>
                 </td>
               </tr>
 
-              {/* 보험료 */}
-              {insurance.amt>0&&(
-                <tr className="border-t border-gray-200">
-                  <td className="px-2 py-2 text-xs font-bold text-gray-600 border-r border-gray-200">보험료</td>
-                  <td className="px-2 py-2 border-r border-gray-200" colSpan={3}>
-                    <CellInput value={insurance.desc} onChange={v=>setInsurance(p=>({...p,desc:v}))} placeholder="보험 종류"/>
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    <CellNum value={insurance.amt} onChange={v=>setInsurance(p=>({...p,amt:v}))} placeholder="0"/>
-                  </td>
-                </tr>
-              )}
+              {/* 주차대행보험료 — 항상 표시 */}
+              <tr className="border-t border-gray-200">
+                <td className="px-2 py-1.5 border-r border-gray-200 font-bold text-gray-600">보험료</td>
+                <td className="px-2 py-1.5 border-r border-gray-200" colSpan={3}>
+                  <CI value={valetIns.desc} onChange={v=>setValetIns(p=>({...p,desc:v}))} placeholder="주차대행보험 내용"/>
+                </td>
+                <td className="px-2 py-1.5 text-right">
+                  <CN value={valetIns.amt} onChange={v=>setValetIns(p=>({...p,amt:v}))} placeholder="0"/>
+                </td>
+              </tr>
 
-              {/* 기타 항목들 */}
+              {/* 기타 항목 */}
               {extras.map(ex=>(
                 <tr key={ex.id} className="border-t border-gray-200">
-                  <td className="px-2 py-2 border-r border-gray-200">
-                    <CellInput value={ex.label} onChange={v=>setExtras(es=>es.map(e=>e.id===ex.id?{...e,label:v}:e))} placeholder="항목명"/>
+                  <td className="px-2 py-1.5 border-r border-gray-200">
+                    <CI value={ex.label} onChange={v=>setExtras(es=>es.map(e=>e.id===ex.id?{...e,label:v}:e))} placeholder="항목명"/>
                   </td>
-                  <td className="px-2 py-2 border-r border-gray-200" colSpan={3}>
-                    <CellInput value={ex.desc} onChange={v=>setExtras(es=>es.map(e=>e.id===ex.id?{...e,desc:v}:e))} placeholder="내용"/>
+                  <td className="px-2 py-1.5 border-r border-gray-200" colSpan={3}>
+                    <CI value={ex.desc} onChange={v=>setExtras(es=>es.map(e=>e.id===ex.id?{...e,desc:v}:e))} placeholder="내용"/>
                   </td>
-                  <td className="px-2 py-2 text-right">
+                  <td className="px-2 py-1.5 text-right">
                     <div className="flex items-center gap-1 justify-end">
-                      <CellNum value={ex.amt} onChange={v=>setExtras(es=>es.map(e=>e.id===ex.id?{...e,amt:v}:e))} placeholder="0"/>
-                      <button onClick={()=>setExtras(es=>es.filter(e=>e.id!==ex.id))} className="text-red-300 hover:text-red-500 text-xs ml-1 print:hidden">✕</button>
+                      <CN value={ex.amt} onChange={v=>setExtras(es=>es.map(e=>e.id===ex.id?{...e,amt:v}:e))} placeholder="0"/>
+                      <button onClick={()=>setExtras(es=>es.filter(e=>e.id!==ex.id))} className="text-red-300 hover:text-red-500 print:hidden" style={{fontSize:"10px"}}>✕</button>
                     </div>
                   </td>
                 </tr>
               ))}
 
-              {/* 보험료/기타 추가 버튼 */}
+              {/* 기타 추가 */}
               <tr className="border-t border-dashed border-gray-200 print:hidden">
-                <td colSpan={6} className="px-3 py-1.5 bg-gray-50">
-                  <div className="flex gap-3">
-                    <button onClick={()=>setInsurance(p=>({...p,amt:p.amt||700000}))} className="text-xs text-gray-500 hover:text-blue-500 font-bold">+ 보험료 행</button>
-                    <button onClick={()=>setExtras(es=>[...es,{id:Date.now(),label:"부스 인테리어",desc:"부스 인테리어 비용 (1회 한)",amt:0}])} className="text-xs text-gray-500 hover:text-blue-500 font-bold">+ 기타 항목</button>
-                  </div>
+                <td colSpan={6} className="px-2 py-1 bg-gray-50">
+                  <button onClick={()=>setExtras(es=>[...es,{id:Date.now(),label:"부스 인테리어",desc:"부스 인테리어 비용 (1회 한)",amt:0}])} className="text-gray-500 font-bold hover:text-blue-500" style={{fontSize:"10px"}}>+ 기타 항목 추가</button>
                 </td>
               </tr>
 
-              {/* 에누리 */}
-              {summary.discAmt>0&&(
-                <tr className="border-t border-gray-200 bg-red-50/30">
-                  <td className="px-3 py-2 font-bold text-red-500 border-r border-gray-200 text-center">에누리</td>
-                  <td className="px-2 py-2 text-red-400 border-r border-gray-200" colSpan={4}>할인 적용</td>
-                  <td className="px-2 py-2 text-right font-mono font-bold text-red-500">-{fmt(summary.discAmt)}</td>
+              {/* 에누리 행 (입력값이 있을 때만 표시) */}
+              {summary.disc>0&&(
+                <tr className="border-t border-gray-200 bg-red-50/40">
+                  <td className="px-2 py-1.5 font-bold text-red-500 border-r border-gray-200 text-center">에누리</td>
+                  <td className="px-2 py-1.5 text-red-400 border-r border-gray-200" colSpan={4}>할인 적용</td>
+                  <td className="px-2 py-1.5 text-right font-mono font-bold text-red-500">-{fmt(summary.disc)}</td>
                 </tr>
               )}
 
               {/* 월 견적금액 합계 */}
               <tr className="border-t-2 border-gray-800 bg-yellow-50">
-                <td className="px-3 py-3 font-black text-gray-900 border-r border-gray-200 text-center">월 견적금액</td>
-                <td className="px-3 py-3 text-right font-mono font-black border-r border-gray-200" colSpan={1}>
-                  <span className="text-gray-500">{fmt(summary.salarySum)}</span>
-                </td>
-                <td className="px-3 py-3 text-right border-r border-gray-200"></td>
-                <td className="px-3 py-3 text-right font-mono font-black text-orange-500 border-r border-gray-200" colSpan={2}>
-                  {fmt(summary.ins4Sum+summary.retireSum)}
-                </td>
-                <td className="px-3 py-3 text-right font-black font-mono text-xl text-gray-900">{fmt(summary.final)}</td>
+                <td className="px-2 py-2.5 font-black text-gray-900 border-r border-gray-200 text-center whitespace-nowrap">월 견적금액</td>
+                <td className="px-2 py-2.5 border-r border-gray-200 text-right font-mono font-bold text-gray-500" colSpan={1}>{fmt(summary.salarySum)}</td>
+                <td className="px-2 py-2.5 border-r border-gray-200"></td>
+                <td className="px-2 py-2.5 border-r border-gray-200 text-right font-mono font-bold text-orange-500" colSpan={2}>{fmt(summary.ins4Sum+summary.retireSum)}</td>
+                <td className="px-2 py-2.5 text-right font-black font-mono text-gray-900" style={{fontSize:"16px"}}>{fmt(summary.final)}</td>
               </tr>
             </tbody>
           </table>
 
-          {/* 에누리 조정 패널 (인쇄 숨김) */}
-          <div className="mt-2 flex gap-3 items-center print:hidden">
-            <span className="text-xs text-gray-500 font-bold">에누리:</span>
-            {[["none","없음"],["amt","금액"],["rate","비율"]].map(([k,v])=>(
-              <button key={k} onClick={()=>setDiscount(d=>({...d,type:k}))}
-                className={`px-2.5 py-1 rounded text-xs font-bold border transition-all ${discount.type===k?"bg-red-500 text-white border-red-500":"bg-white border-gray-200 text-gray-500"}`}>{v}</button>
-            ))}
-            {discount.type==="amt"&&<input type="number" value={discount.amt} step={10000} onChange={e=>setDiscount(d=>({...d,amt:e.target.value}))} placeholder="차감금액" className="border border-gray-200 rounded px-2 py-1 text-xs font-mono w-28 focus:outline-none focus:border-red-400"/>}
-            {discount.type==="rate"&&<input type="number" value={discount.rate} step={0.5} min={0} max={100} onChange={e=>setDiscount(d=>({...d,rate:e.target.value}))} placeholder="%" className="border border-gray-200 rounded px-2 py-1 text-xs font-mono w-16 focus:outline-none focus:border-red-400"/>}
-            {summary.discAmt>0&&<span className="text-xs text-red-500 font-bold">-{fmt(summary.discAmt)}원 할인</span>}
+          {/* 에누리 직접 입력 (인쇄 숨김) */}
+          <div className="mt-1.5 flex items-center gap-2 print:hidden">
+            <span style={{fontSize:"11px"}} className="text-gray-500 font-bold">에누리:</span>
+            <input type="number" value={discAmt||""} step={10000} min={0}
+              onChange={e=>setDiscAmt(parseInt(e.target.value)||0)}
+              placeholder="직접 입력 (원)"
+              className="border border-red-200 rounded px-2 py-1 font-mono bg-white focus:outline-none focus:border-red-400 w-36 text-right" style={{fontSize:"11px"}}/>
+            {summary.disc>0&&<span style={{fontSize:"11px"}} className="text-red-500 font-bold">-{fmt(summary.disc)}원 할인 적용</span>}
+            {summary.disc>0&&<button onClick={()=>setDiscAmt(0)} className="text-gray-400 hover:text-gray-600" style={{fontSize:"10px"}}>✕ 초기화</button>}
           </div>
         </div>
 
         {/* 운영 중점 사항 */}
-        <div className="px-8 py-4 border-t border-gray-200">
-          <p className="text-xs font-black text-gray-700 mb-3">· 운영 중점 사항</p>
-          <div className="grid grid-cols-2 gap-4 text-xs">
+        <div className="px-6 py-3 border-t border-gray-200">
+          <p style={{fontSize:"11px"}} className="font-black text-gray-700 mb-2">· 운영 중점 사항</p>
+          <div className="grid grid-cols-2 gap-4" style={{fontSize:"11px"}}>
             <div>
-              <p className="font-bold text-gray-700 mb-1.5">발렛요원 서비스 차별화</p>
+              <p className="font-bold text-gray-700 mb-1">발렛요원 서비스 차별화</p>
               {["-전문 서비스 강사 교육 이수자 현장 투입","-고객 편의를 고려하는 감성 케어 서비스 제공","-매월 고객사 의견 수렴, 서비스 태도 부족 시 경고 및 교체 처리"].map((t,i)=><p key={i} className="text-gray-500 leading-relaxed">{t}</p>)}
             </div>
             <div>
-              <p className="font-bold text-gray-700 mb-1.5">현장 불편 최소화</p>
+              <p className="font-bold text-gray-700 mb-1">현장 불편 최소화</p>
               {["-국내 유일 발렛 전용(주차장 및 도로) 보험 소유 (DB손해보험, 현대해상)","-고객 차량 사고 시 보험 처리로 발생되는 자기 부담금 당사 전체 부담","-발렛비(주차 요금) 징수 방법 고객사 선택 가능 (현금, 카드 등)"].map((t,i)=><p key={i} className="text-gray-500 leading-relaxed">{t}</p>)}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ════════════════════════════════════
-          하단 계산 요약 패널 (인쇄 숨김)
-      ════════════════════════════════════ */}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 print:hidden">
-        {/* 인건비 상세 */}
+      {/* ══ 하단 계산 요약 (인쇄 숨김) ══ */}
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 print:hidden">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 col-span-2">
-          <p className="text-xs font-black text-gray-600 uppercase tracking-widest mb-3">인건비 상세 계산</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left pb-2 text-gray-400 font-bold">구분</th>
-                  <th className="text-right pb-2 text-gray-400 font-bold">월급여</th>
-                  <th className="text-right pb-2 text-gray-400 font-bold">역산시급</th>
-                  <th className="text-right pb-2 text-gray-400 font-bold">4대보험</th>
-                  <th className="text-right pb-2 text-gray-400 font-bold">퇴직충당</th>
-                  <th className="text-right pb-2 text-gray-400 font-bold">인원</th>
-                  <th className="text-right pb-2 text-gray-400 font-bold">소계</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((g,gi)=>{
-                  const c=groupCalcs[gi];
-                  return(
-                    <tr key={g.id} className="border-b border-gray-50 last:border-0">
-                      <td className="py-2 font-bold text-gray-700">{g.label}</td>
-                      <td className="py-2 text-right font-mono">{fmt(g.monthlySalary)}</td>
-                      <td className={`py-2 text-right font-mono font-bold ${c.hrRate<MIN_WAGE?"text-red-500":"text-blue-600"}`}>{fmt(c.hrRate)}원/h</td>
-                      <td className="py-2 text-right font-mono text-orange-500">{fmt(c.ins.total)}</td>
-                      <td className="py-2 text-right font-mono text-amber-600">{fmt(c.retire)}</td>
-                      <td className="py-2 text-right font-mono">{g.headcount}명</td>
-                      <td className="py-2 text-right font-mono font-bold text-gray-800">{fmt(c.rowTotal)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-300">
-                  <td className="pt-2 font-black text-gray-700" colSpan={3}>인건비 합계</td>
-                  <td className="pt-2 text-right font-mono font-bold text-orange-500">{fmt(summary.ins4Sum)}</td>
-                  <td className="pt-2 text-right font-mono font-bold text-amber-600">{fmt(summary.retireSum)}</td>
-                  <td></td>
-                  <td className="pt-2 text-right font-mono font-black text-gray-900">{fmt(summary.laborTotal)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">인건비 상세</p>
+          <table className="w-full" style={{fontSize:"11px"}}>
+            <thead><tr className="border-b border-gray-100">{["구분","월급여","역산시급","4대보험","퇴직충당","인원","소계"].map(h=><th key={h} className="pb-1.5 font-bold text-gray-400 text-right first:text-left">{h}</th>)}</tr></thead>
+            <tbody>
+              {groups.map((g,gi)=>{
+                const c=groupCalcs[gi];
+                return(<tr key={g.id} className="border-b border-gray-50 last:border-0">
+                  <td className="py-1.5 font-bold text-gray-700">{g.label}</td>
+                  <td className="py-1.5 text-right font-mono">{fmt(g.monthlySalary)}</td>
+                  <td className={`py-1.5 text-right font-mono font-bold ${c.hrRate<MIN_WAGE?"text-red-500":"text-blue-600"}`}>{fmt(c.hrRate)}원/h</td>
+                  <td className="py-1.5 text-right font-mono text-orange-500">{fmt(c.ins.total)}</td>
+                  <td className="py-1.5 text-right font-mono text-amber-600">{fmt(c.retire)}</td>
+                  <td className="py-1.5 text-right font-mono">{g.headcount}명</td>
+                  <td className="py-1.5 text-right font-mono font-bold text-gray-800">{fmt(c.rowTotal)}</td>
+                </tr>);
+              })}
+            </tbody>
+            <tfoot><tr className="border-t-2 border-gray-200">
+              <td className="pt-1.5 font-black text-gray-700" colSpan={3}>합계</td>
+              <td className="pt-1.5 text-right font-mono font-bold text-orange-500">{fmt(summary.ins4Sum)}</td>
+              <td className="pt-1.5 text-right font-mono font-bold text-amber-600">{fmt(summary.retireSum)}</td>
+              <td></td>
+              <td className="pt-1.5 text-right font-mono font-black text-gray-900">{fmt(summary.laborTotal)}</td>
+            </tr></tfoot>
+          </table>
         </div>
-
-        {/* 최종 합계 요약 */}
         <div className="bg-gray-900 rounded-xl p-4">
           <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">견적 합계</p>
-          <div className="space-y-2">
-            {[
-              ["인건비 합계", fmt(summary.laborTotal)+"원", "text-gray-200"],
-              ["운영지원금", fmt(summary.supportAmt)+"원", "text-gray-200"],
-              ...(summary.insAmt>0?[["보험료", fmt(summary.insAmt)+"원", "text-gray-200"]]:[]),
-              ...(summary.extAmt>0?[["기타", fmt(summary.extAmt)+"원", "text-gray-200"]]:[]),
-            ].map(([l,v,c])=>(
-              <div key={l} className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">{l}</span>
-                <span className={`text-xs font-mono ${c}`}>{v}</span>
-              </div>
+          <div className="space-y-1.5" style={{fontSize:"11px"}}>
+            {[["인건비",fmt(summary.laborTotal)+"원","text-gray-200"],["운영지원금",fmt(summary.supportAmt)+"원","text-gray-200"],["주차대행보험료",fmt(summary.insAmt)+"원","text-gray-200"],...extras.map(e=>[e.label||"기타",fmt(parseInt(e.amt)||0)+"원","text-gray-200"])].map(([l,v,c])=>(
+              <div key={l} className="flex justify-between"><span className="text-gray-500">{l}</span><span className={`font-mono ${c}`}>{v}</span></div>
             ))}
-            <div className="flex justify-between items-center border-t border-gray-700 pt-2">
-              <span className="text-xs text-gray-400 font-bold">소계</span>
-              <span className="text-xs font-mono font-bold text-gray-100">{fmt(summary.raw)}원</span>
+            <div className="flex justify-between border-t border-gray-700 pt-1.5"><span className="text-gray-400 font-bold">소계</span><span className="font-mono font-bold text-gray-100">{fmt(summary.raw)}원</span></div>
+            {summary.disc>0&&<div className="flex justify-between"><span className="text-red-400 font-bold">에누리</span><span className="font-mono text-red-400">-{fmt(summary.disc)}원</span></div>}
+            <div className="flex justify-between bg-blue-600 rounded-lg px-3 py-2 mt-1">
+              <span className="text-white font-black">월 견적금액</span>
+              <span className="text-white font-black font-mono text-base">{fmt(summary.final)}원</span>
             </div>
-            {summary.discAmt>0&&(
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-red-400 font-bold">에누리</span>
-                <span className="text-xs font-mono text-red-400">-{fmt(summary.discAmt)}원</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center bg-blue-600 rounded-lg px-3 py-2.5 mt-1">
-              <span className="text-sm text-white font-black">월 견적금액</span>
-              <span className="text-lg text-white font-black font-mono">{fmt(summary.final)}원</span>
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-gray-500 mt-1">VAT 별도</p>
-              <p className="text-xs text-gray-400 font-mono">+VAT: {fmt(Math.round(summary.final*0.1))}원</p>
-              <p className="text-sm font-black text-yellow-400 font-mono">총 {fmt(Math.round(summary.final*1.1))}원</p>
+            <div className="bg-gray-800 rounded-lg px-3 py-2 text-center">
+              <p className="text-gray-500 text-xs">VAT 포함 시</p>
+              <p className="text-yellow-400 font-black font-mono">{fmt(Math.round(summary.final*1.1))}원</p>
             </div>
           </div>
         </div>
