@@ -479,11 +479,11 @@ function ColEstimate({ c, hasWe, totalPeople, set }) {
         <div className="text-xs font-black text-gray-600 mb-2">✏️ 견적 추가항목 (수기 입력)</div>
         <div className="space-y-2">
           <div>
-            <LB>🏢 고객사 보험료</LB>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">🏢 고객사 보험료</label>
             <NInput value={c.clientInsStr} onChange={set.clientInsStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
           </div>
           <div>
-            <LB>💡 운영지원금</LB>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">💡 운영지원금</label>
             <NInput value={c.supportStr} onChange={set.supportStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
           </div>
         </div>
