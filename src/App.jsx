@@ -402,62 +402,26 @@ function ColInsurance({ c, hasWe, wdDays, weDays }) {
 }
 
 /* ── 열 3: 월 견적금액 ── */
-function ColEstimate({ c, hasWe, totalPeople, set }) {
-  const ic="w-full px-2.5 py-1.5 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 focus:outline-none focus:border-blue-500 transition-all";
+function ColEstimate({ c, hasWe, totalPeople, set, parkingIns, setParkingIns }) {
+  const ic  = "w-full px-2 py-1.5 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 focus:outline-none focus:border-blue-500 transition-all";
+  const icp = "w-full px-2 py-1.5 border-2 border-purple-200 rounded-lg text-xs bg-purple-50 focus:outline-none focus:border-purple-400 transition-all";
+
+  const totalParking = parkingIns.reduce((s,p)=>s+parseNum(p.amt),0);
+
   const rows = [
-    ["💵 급여 합계 (세전)",   c.totalGross,   "text-blue-400",   "bg-blue-900"],
-    ["🏢 사업주 4대보험",     c.totalInsR,    "text-red-400",    "bg-red-900"],
-    ["📦 월 퇴직금 (÷12)",   c.totalRetire,  "text-amber-400",  "bg-amber-900"],
-    c.clientIns>0?["🏢 고객사 보험료", c.clientIns, "text-fuchsia-400","bg-fuchsia-900"]:null,
-    c.support>0  ?["💡 운영지원금",   c.support,   "text-green-400",  "bg-green-900"]:null,
+    ["💵 급여 합계 (세전)", c.totalGross,  "text-blue-400",  "bg-blue-900"],
+    ["🏢 사업주 4대보험",   c.totalInsR,   "text-red-400",   "bg-red-900"],
+    ["📦 월 퇴직금 (÷12)", c.totalRetire, "text-amber-400", "bg-amber-900"],
+    ...parkingIns.filter(p=>parseNum(p.amt)>0).map(p=>[
+      `🅿️ ${p.name||"주차장 보험"}`, parseNum(p.amt), "text-fuchsia-400", "bg-fuchsia-900"
+    ]),
+    c.support>0 ? ["💡 운영지원금", c.support, "text-green-400", "bg-green-900"] : null,
   ].filter(Boolean);
 
   return (
     <div className="space-y-2">
-      <div className="bg-gradient-to-b from-slate-800 to-indigo-950 rounded-xl overflow-hidden shadow-xl">
-        {/* 헤더 */}
-        <div className="px-4 py-3 border-b border-white border-opacity-10">
-          <p className="text-xs text-slate-400 font-semibold">📋 월 견적금액 합산</p>
-          <div className="text-3xl font-black font-mono text-yellow-300 mt-1 leading-none">
-            {fmt(c.estimate)}<span className="text-sm text-yellow-400">원</span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">급여 + 보험 + 퇴직금 + 추가항목</p>
-        </div>
 
-        {/* 항목 내역 */}
-        <div className="p-3 space-y-1.5">
-          {rows.map(([l,v,col,bg])=>(
-            <div key={l} className={`flex items-center justify-between rounded-lg px-3 py-2 ${bg} bg-opacity-30`}>
-              <span className="text-xs text-slate-300">{l}</span>
-              <span className={`font-mono font-black text-sm ${col}`}>{fmt(v)}<span className="text-xs opacity-70">원</span></span>
-            </div>
-          ))}
-
-          {/* 구분선 */}
-          <div className="border-t border-white border-opacity-20 pt-2 mt-1">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-black text-slate-300">🧾 합계</span>
-              <span className="text-xl font-black font-mono text-yellow-300">{fmt(c.estimate)}<span className="text-xs">원</span></span>
-            </div>
-            {/* 요약 카드 3개 세로 */}
-            <div className="space-y-1.5">
-              {[
-                ["📅 연간 견적 (×12)", fmt(c.estimate*12)+"원", "text-yellow-200"],
-                ["👤 1인 월평균",       fmt(c.estimate/Math.max(1,totalPeople))+"원", "text-blue-200"],
-                ["🏢 총 사업주 부담",   fmt(c.totalInsR+c.totalRetire+c.clientIns+c.support)+"원", "text-red-200"],
-                ["💚 총 실수령 합계",   fmt(c.totalNet)+"원", "text-emerald-200"],
-              ].map(([l,v,col])=>(
-                <div key={l} className="flex justify-between items-center bg-white bg-opacity-5 rounded-lg px-3 py-2">
-                  <span className="text-xs text-slate-400">{l}</span>
-                  <span className={`text-xs font-black font-mono ${col}`}>{v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 인원 요약 뱃지 */}
+      {/* ① 인원 구성 — 합산표 위 */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
         <div className="text-xs font-black text-gray-600 mb-2">👥 인원 구성</div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -474,19 +438,89 @@ function ColEstimate({ c, hasWe, totalPeople, set }) {
         </div>
       </div>
 
-      {/* 견적 추가항목 수기입력 */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-        <div className="text-xs font-black text-gray-600 mb-2">✏️ 견적 추가항목 (수기 입력)</div>
-        <div className="space-y-2">
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">🏢 고객사 보험료</label>
-            <NInput value={c.clientInsStr} onChange={set.clientInsStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
+      {/* ② 견적금액 합산 */}
+      <div className="bg-gradient-to-b from-slate-800 to-indigo-950 rounded-xl overflow-hidden shadow-xl">
+        {/* 헤더 */}
+        <div className="px-4 py-3 border-b border-white border-opacity-10">
+          <p className="text-xs text-slate-400 font-semibold">📋 월 견적금액 합산</p>
+          <div className="text-3xl font-black font-mono text-yellow-300 mt-1 leading-none">
+            {fmt(c.estimate)}<span className="text-sm text-yellow-400">원</span>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">💡 운영지원금</label>
-            <NInput value={c.supportStr} onChange={set.supportStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
+          <p className="text-xs text-slate-500 mt-1">급여 + 보험 + 퇴직금 + 추가항목</p>
+        </div>
+
+        {/* 항목 내역 */}
+        <div className="p-3 space-y-1.5">
+          {rows.map(([l,v,col,bg],i)=>(
+            <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2 ${bg} bg-opacity-30`}>
+              <span className="text-xs text-slate-300">{l}</span>
+              <span className={`font-mono font-black text-sm ${col}`}>{fmt(v)}<span className="text-xs opacity-70">원</span></span>
+            </div>
+          ))}
+
+          {/* 합계 */}
+          <div className="border-t border-white border-opacity-20 pt-2 mt-1">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-black text-slate-300">🧾 합계</span>
+              <span className="text-xl font-black font-mono text-yellow-300">{fmt(c.estimate)}<span className="text-xs">원</span></span>
+            </div>
+            <div className="space-y-1.5">
+              {[
+                ["📅 연간 견적 (×12)", fmt(c.estimate*12)+"원", "text-yellow-200"],
+                ["👤 1인 월평균",      fmt(c.estimate/Math.max(1,totalPeople))+"원", "text-blue-200"],
+                ["🏢 총 사업주 부담",  fmt(c.totalInsR+c.totalRetire+c.clientIns+c.support)+"원", "text-red-200"],
+                ["💚 총 실수령 합계",  fmt(c.totalNet)+"원", "text-emerald-200"],
+              ].map(([l,v,col])=>(
+                <div key={l} className="flex justify-between items-center bg-white bg-opacity-5 rounded-lg px-3 py-2">
+                  <span className="text-xs text-slate-400">{l}</span>
+                  <span className={`text-xs font-black font-mono ${col}`}>{v}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* ③ 주차장 보험료 수기입력 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-black text-gray-600">🅿️ 주차장 보험료</div>
+          {totalParking>0&&(
+            <div className="text-xs font-black text-fuchsia-600 font-mono">합계 {fmt(totalParking)}원</div>
+          )}
+        </div>
+        {/* 헤더 행 */}
+        <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+          <span className="text-xs text-gray-400 font-semibold px-1">종류</span>
+          <span className="text-xs text-gray-400 font-semibold px-1">금액</span>
+        </div>
+        {/* 3행 입력 */}
+        <div className="space-y-1.5">
+          {parkingIns.map((p,i)=>(
+            <div key={i} className="grid grid-cols-2 gap-1.5">
+              <input
+                type="text"
+                value={p.name}
+                onChange={e=>setParkingIns(prev=>prev.map((x,j)=>j===i?{...x,name:e.target.value}:x))}
+                placeholder={["기계식","자주식","공도"][i]||"종류명"}
+                className={icp}
+              />
+              <NInput
+                value={p.amt}
+                onChange={v=>setParkingIns(prev=>prev.map((x,j)=>j===i?{...x,amt:v}:x))}
+                placeholder="0"
+                suffix="원"
+                className={`${icp} pr-8`}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ④ 운영지원금 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+        <label className="block text-xs font-black text-gray-600 mb-2">💡 운영지원금</label>
+        <NInput value={c.supportStr} onChange={set.supportStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
       </div>
     </div>
   );
@@ -513,12 +547,18 @@ export default function App() {
   const [weDailyStr,setWeDailyStr]=useState("150000");
   const [dep,setDep]=useState(1);
   const [mealStr,setMealStr]=useState("200000");
-  const [clientInsStr,setClientInsStr]=useState("");
+  // 주차장 보험료: [{name, amt}] × 3
+  const [parkingIns,setParkingIns]=useState([
+    {name:"기계식", amt:""},
+    {name:"자주식", amt:""},
+    {name:"공도",   amt:""},
+  ]);
   const [supportStr,setSupportStr]=useState("");
 
   const c=useMemo(()=>{
     const meal=parseNum(mealStr), wdN=Math.max(1,parseNum(wdCount)), weN=Math.max(1,parseNum(weCount));
-    const clientIns=parseNum(clientInsStr), support=parseNum(supportStr);
+    const clientIns=parkingIns.reduce((s,p)=>s+parseNum(p.amt),0);
+    const support=parseNum(supportStr);
     const wdS=buildSched(wdDays,wdStart,wdEnd,wdBreak);
     const wdHr=wdMode==="monthly"?reverseCalcHr(parseNum(wdMoStr),wdS,meal):parseNum(wdHrStr);
     const wdR=calcForRate(wdHr,wdS,meal,dep);
@@ -538,12 +578,12 @@ export default function App() {
     const weRetire1=weR?Math.round(weR.gross/12):0;
     const estimate=totalGross+totalInsR+totalRetire+clientIns+support;
     return {wdS,wdR,wdN,wdHr,weS,weR,weN,weHr,totalGross,totalInsR,totalNet,totalCost,totalRetire,wdRetire1,weRetire1,clientIns,support,estimate};
-  },[wdDays,wdStart,wdEnd,wdBreak,wdCount,wdMode,wdMoStr,wdHrStr,hasWe,weDays,weTimeSame,weStart,weEnd,weBreak,weCount,weWageMode,weDailyStr,dep,mealStr,clientInsStr,supportStr]);
+  },[wdDays,wdStart,wdEnd,wdBreak,wdCount,wdMode,wdMoStr,wdHrStr,hasWe,weDays,weTimeSame,weStart,weEnd,weBreak,weCount,weWageMode,weDailyStr,dep,mealStr,parkingIns,supportStr]);
 
   const totalPeople=c.wdN+(hasWe&&c.weR?c.weN:0);
 
-  const state={wdDays,wdStart,wdEnd,wdBreak,wdCount,wdMode,wdMoStr,wdHrStr,hasWe,weDays,weTimeSame,weStart,weEnd,weBreak,weCount,weWageMode,weDailyStr,dep,mealStr,clientInsStr,supportStr};
-  const set={wdDays:setWdDays,wdStart:setWdStart,wdEnd:setWdEnd,wdBreak:setWdBreak,wdCount:setWdCount,wdMode:setWdMode,wdMoStr:setWdMoStr,wdHrStr:setWdHrStr,hasWe:setHasWe,weDays:setWeDays,weTimeSame:setWeTimeSame,weStart:setWeStart,weEnd:setWeEnd,weBreak:setWeBreak,weCount:setWeCount,weWageMode:setWeWageMode,weDailyStr:setWeDailyStr,dep:setDep,mealStr:setMealStr,clientInsStr:setClientInsStr,supportStr:setSupportStr};
+  const state={wdDays,wdStart,wdEnd,wdBreak,wdCount,wdMode,wdMoStr,wdHrStr,hasWe,weDays,weTimeSame,weStart,weEnd,weBreak,weCount,weWageMode,weDailyStr,dep,mealStr,clientInsStr:"",supportStr};
+  const set={wdDays:setWdDays,wdStart:setWdStart,wdEnd:setWdEnd,wdBreak:setWdBreak,wdCount:setWdCount,wdMode:setWdMode,wdMoStr:setWdMoStr,wdHrStr:setWdHrStr,hasWe:setHasWe,weDays:setWeDays,weTimeSame:setWeTimeSame,weStart:setWeStart,weEnd:setWeEnd,weBreak:setWeBreak,weCount:setWeCount,weWageMode:setWeWageMode,weDailyStr:setWeDailyStr,dep:setDep,mealStr:setMealStr,clientInsStr:()=>{},supportStr:setSupportStr};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 pb-10">
@@ -569,7 +609,7 @@ export default function App() {
           {/* 열2: 사업주 4대보험 */}
           <ColInsurance c={c} hasWe={hasWe} wdDays={wdDays} weDays={weDays}/>
           {/* 열3: 월 견적금액 */}
-          <ColEstimate c={{...c, clientInsStr, supportStr}} hasWe={hasWe} totalPeople={totalPeople} set={set}/>
+          <ColEstimate c={{...c, supportStr}} hasWe={hasWe} totalPeople={totalPeople} set={set} parkingIns={parkingIns} setParkingIns={setParkingIns}/>
         </div>
       </div>
     </div>
