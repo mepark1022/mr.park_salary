@@ -313,11 +313,10 @@ function ColInsurance({ c, hasWe, wdDays, weDays }) {
         </div>
 
         <div className="p-3 space-y-2">
-          {/* 급여 요약 4박스 */}
-          <div className="grid grid-cols-2 gap-1.5">
+          {/* 급여 요약 3박스 한 줄 */}
+          <div className="grid grid-cols-3 gap-1.5">
             {[
               ["세전 월급", r.gross, isOrange?"text-orange-700":"text-blue-700"],
-              ["💚 실수령액", r.net, "text-emerald-700"],
               ["사업주 보험", r.insR, "text-red-600"],
               ["1인 총인건비", r.totCost, "text-purple-700"],
             ].map(([l,v,cl])=>(
