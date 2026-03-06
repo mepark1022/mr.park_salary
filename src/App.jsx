@@ -282,36 +282,7 @@ function ColInput({ state, set, c }) {
         </div>
       </Card>
 
-      {/* 기타 설정 */}
-      <Card>
-        <CardHead color="slate">⚙️ 기타 설정</CardHead>
-        <div className="p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <LB>식대 비과세</LB>
-              <NInput value={mealStr} onChange={set.mealStr} suffix="원" className={`${ic} pr-8`}/>
-              <p className="text-xs text-gray-400 mt-0.5">최대 200,000원</p>
-            </div>
-            <div>
-              <LB>부양가족</LB>
-              <select value={dep} onChange={e=>set.dep(parseInt(e.target.value))} className={ic}>
-                {[1,2,3,4,5,6,7].map(n=><option key={n} value={n}>{n}명{n===1?" (본인만)":""}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="border-t border-dashed border-gray-200 pt-2 space-y-1.5">
-            <p className="text-xs font-bold text-gray-500">견적 추가항목 (수기)</p>
-            <div>
-              <LB>🏢 고객사 보험료</LB>
-              <NInput value={clientInsStr} onChange={set.clientInsStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
-            </div>
-            <div>
-              <LB>💡 운영지원금</LB>
-              <NInput value={supportStr} onChange={set.supportStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
-            </div>
-          </div>
-        </div>
-      </Card>
+
     </div>
   );
 }
@@ -431,7 +402,8 @@ function ColInsurance({ c, hasWe, wdDays, weDays }) {
 }
 
 /* ── 열 3: 월 견적금액 ── */
-function ColEstimate({ c, hasWe, totalPeople }) {
+function ColEstimate({ c, hasWe, totalPeople, set }) {
+  const ic="w-full px-2.5 py-1.5 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 focus:outline-none focus:border-blue-500 transition-all";
   const rows = [
     ["💵 급여 합계 (세전)",   c.totalGross,   "text-blue-400",   "bg-blue-900"],
     ["🏢 사업주 4대보험",     c.totalInsR,    "text-red-400",    "bg-red-900"],
@@ -499,6 +471,21 @@ function ColEstimate({ c, hasWe, totalPeople }) {
               <div className="text-xs opacity-70">{l}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* 견적 추가항목 수기입력 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+        <div className="text-xs font-black text-gray-600 mb-2">✏️ 견적 추가항목 (수기 입력)</div>
+        <div className="space-y-2">
+          <div>
+            <LB>🏢 고객사 보험료</LB>
+            <NInput value={c.clientInsStr} onChange={set.clientInsStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
+          </div>
+          <div>
+            <LB>💡 운영지원금</LB>
+            <NInput value={c.supportStr} onChange={set.supportStr} placeholder="0" suffix="원" className={`${ic} pr-8`}/>
+          </div>
         </div>
       </div>
     </div>
@@ -582,7 +569,7 @@ export default function App() {
           {/* 열2: 사업주 4대보험 */}
           <ColInsurance c={c} hasWe={hasWe} wdDays={wdDays} weDays={weDays}/>
           {/* 열3: 월 견적금액 */}
-          <ColEstimate c={c} hasWe={hasWe} totalPeople={totalPeople}/>
+          <ColEstimate c={{...c, clientInsStr, supportStr}} hasWe={hasWe} totalPeople={totalPeople} set={set}/>
         </div>
       </div>
     </div>
