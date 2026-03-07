@@ -323,7 +323,7 @@ export default function App() {
                   </div>
                   <div>
                     <label style={labelStyle}>인원 (명)</label>
-                    <input type="number" value={wdHead} min={1} onChange={e => setWdHead(parseInt(e.target.value) || 1)} style={{ ...inputStyle, textAlign: "center", fontWeight: 700 }} />
+                    <input type="number" value={wdHead} min={0} onChange={e => setWdHead(parseInt(e.target.value) || 0)} style={{ ...inputStyle, textAlign: "center", fontWeight: 700 }} />
                   </div>
                 </div>
                 <label style={labelStyle}>근무시간</label>
@@ -712,20 +712,20 @@ export default function App() {
                 </thead>
                 <tbody>
                   {[
-                    { no: 1, name: "인건비 (평일 / 주5일)", amount: weekday.perPerson, qty: wdHead, sub: laborWeekday, detail: `월급 ${fmt(wdSalary)}원 + 4대보험${weekday.hasRetirement ? " + 퇴직충당금" : ""}` },
-                    ...(weDays > 0 ? [{ no: 2, name: `인건비 (주말 / 주${weDays}일)`, amount: weekend.perPerson, qty: weHead, sub: laborWeekend }] : []),
-                    { no: weDays > 0 ? 3 : 2, name: "운영지원금", amount: opSupport, qty: 1, sub: opSupport, detail: "운영관리 + 사고 리스크 대비" },
-                    { no: weDays > 0 ? 4 : 3, name: "발렛보험비", amount: insurance, qty: 1, sub: insurance, detail: "발렛 차량 사고 보험" },
+                    ...(wdHead > 0 ? [{ name: "인건비 (평일 / 주5일)", amount: weekday.perPerson, qty: wdHead, sub: laborWeekday, detail: `월급 ${fmt(wdSalary)}원 + 4대보험${weekday.hasRetirement ? " + 퇴직충당금" : ""}` }] : []),
+                    ...(weDays > 0 && weHead > 0 ? [{ name: `인건비 (주말 / 주${weDays}일)`, amount: weekend.perPerson, qty: weHead, sub: laborWeekend }] : []),
+                    { name: "운영지원금", amount: opSupport, qty: 1, sub: opSupport, detail: "운영관리 + 사고 리스크 대비" },
+                    { name: "발렛보험비", amount: insurance, qty: 1, sub: insurance, detail: "발렛 차량 사고 보험" },
                   ].map((row, i) => (
                     <>
-                      <tr key={row.no} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
-                        <td style={{ padding: "10px 8px", fontWeight: 700, color: C.navy, fontSize: 11 }}>{row.no}</td>
+                      <tr key={i} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
+                        <td style={{ padding: "10px 8px", fontWeight: 700, color: C.navy, fontSize: 11 }}>{i + 1}</td>
                         <td style={{ padding: "10px 8px", fontWeight: 700, fontSize: 11 }}>{row.name}</td>
                         <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: numFont, fontSize: 11 }}>{fmt(row.amount)}</td>
                         <td style={{ padding: "10px 8px", textAlign: "center", fontSize: 11 }}>{row.qty}</td>
                         <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, fontFamily: numFont, fontSize: 11 }}>{fmt(row.sub)}</td>
                       </tr>
-                      <tr key={`d-${row.no}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <tr key={`d-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
                         <td />
                         <td colSpan={4} style={{ padding: "3px 8px 8px", fontSize: 9, color: C.gray }}>{row.detail}</td>
                       </tr>
