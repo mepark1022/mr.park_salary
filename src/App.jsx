@@ -127,6 +127,46 @@ export default function App() {
     setTimeout(() => { setShowPwChange(false); setCpMsg({ text: "", ok: false }); }, 1200);
   };
 
+  /* ── 견적산출표 state ── */
+  const [wdSalary, setWdSalary] = useState(2200000);
+  const [wdHead, setWdHead] = useState(1);
+  const [wdStart, setWdStart] = useState("09:00");
+  const [wdEnd, setWdEnd] = useState("18:00");
+  const [wdBreak, setWdBreak] = useState(60);
+
+  const [weChecked, setWeChecked] = useState({ sat: true, sun: true });
+  const [wePay, setWePay] = useState(120000);
+  const [weHead, setWeHead] = useState(1);
+  const [weStart, setWeStart] = useState("09:00");
+  const [weEnd, setWeEnd] = useState("18:00");
+  const [weBreak, setWeBreak] = useState(60);
+
+  const [opSupport, setOpSupport] = useState(2000000);
+  const [insurance, setInsurance] = useState(500000);
+
+  /* ── 에누리 ── */
+  const [discountMode, setDiscountMode] = useState("amount");
+  const [discountValue, setDiscountValue] = useState(0);
+  const [discountInput, setDiscountInput] = useState("");
+
+  /* ── 견적서 폼 state ── */
+  const [clientSite, setClientSite] = useState("");
+  const [contractType, setContractType] = useState("협의 (참고자료)");
+  const [contractPeriod, setContractPeriod] = useState("기본 1년");
+  const [operatingHours, setOperatingHours] = useState("추후협의 (09-18시 예시)");
+
+  const printRef = useRef(null);
+
+  /* ── 폰트 로드 ── */
+  useEffect(() => {
+    if (!document.querySelector(`link[href="${FONT_LINK}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = FONT_LINK;
+      document.head.appendChild(link);
+    }
+  }, []);
+
   if (!authed) {
     return (
       <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a1654 0%, #1428A0 50%, #1e3ab8 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Noto Sans KR','맑은 고딕',sans-serif" }}>
@@ -161,45 +201,6 @@ export default function App() {
       </div>
     );
   }
-  /* ── 견적산출표 state ── */
-  const [wdSalary, setWdSalary] = useState(2200000);
-  const [wdHead, setWdHead] = useState(1);
-  const [wdStart, setWdStart] = useState("09:00");
-  const [wdEnd, setWdEnd] = useState("18:00");
-  const [wdBreak, setWdBreak] = useState(60);
-
-  const [weChecked, setWeChecked] = useState({ sat: true, sun: true });
-  const [wePay, setWePay] = useState(120000);
-  const [weHead, setWeHead] = useState(1);
-  const [weStart, setWeStart] = useState("09:00");
-  const [weEnd, setWeEnd] = useState("18:00");
-  const [weBreak, setWeBreak] = useState(60);
-
-  const [opSupport, setOpSupport] = useState(2000000);
-  const [insurance, setInsurance] = useState(500000);
-
-  /* ── 에누리 ── */
-  const [discountMode, setDiscountMode] = useState("amount"); // "amount" | "percent"
-  const [discountValue, setDiscountValue] = useState(0);
-  const [discountInput, setDiscountInput] = useState("");
-
-  /* ── 견적서 폼 state ── */
-  const [clientSite, setClientSite] = useState("");
-  const [contractType, setContractType] = useState("협의 (참고자료)");
-  const [contractPeriod, setContractPeriod] = useState("기본 1년");
-  const [operatingHours, setOperatingHours] = useState("추후협의 (09-18시 예시)");
-
-  const printRef = useRef(null);
-
-  /* ── 폰트 로드 ── */
-  useEffect(() => {
-    if (!document.querySelector(`link[href="${FONT_LINK}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = FONT_LINK;
-      document.head.appendChild(link);
-    }
-  }, []);
 
   /* ── 계산 ── */
   const weDays = (weChecked.sat ? 1 : 0) + (weChecked.sun ? 1 : 0);
