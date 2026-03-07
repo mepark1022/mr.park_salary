@@ -638,76 +638,90 @@ export default function App() {
           <div ref={printRef}>
             <div style={{
               width: "100%", maxWidth: 680, margin: "0 auto",
-              background: C.white, borderRadius: 4, padding: "28px 32px",
+              background: C.white, borderRadius: 4, padding: "20px 28px",
               boxShadow: "0 2px 20px rgba(0,0,0,0.08)", border: `1px solid ${C.border}`,
               fontFamily: "'맑은 고딕','Malgun Gothic',sans-serif", color: C.dark, lineHeight: 1.5,
             }}>
 
               {/* 타이틀 + 로고 */}
-              <div style={{ background: C.navy, borderRadius: 8, padding: "18px 24px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ background: C.navy, borderRadius: 6, padding: "12px 20px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: C.white, margin: 0, letterSpacing: 1 }}>주차관리 서비스 견적서</div>
-                  <div style={{ height: 2, width: 60, background: C.gold, borderRadius: 2, marginTop: 8 }} />
+                  <div style={{ fontSize: 18, fontWeight: 900, color: C.white, margin: 0, letterSpacing: 1 }}>주차관리 서비스 견적서</div>
+                  <div style={{ height: 2, width: 50, background: C.gold, borderRadius: 2, marginTop: 5 }} />
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: C.gold, letterSpacing: 4, marginTop: 1 }}>VALETMAN</div>
-                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>MEMBERS</div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: C.gold, letterSpacing: 4 }}>VALETMAN</div>
+                  <div style={{ fontSize: 7, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>MEMBERS</div>
                 </div>
               </div>
 
               {/* 인사말 */}
-              <div style={{ fontSize: 10, color: C.gray, lineHeight: 1.7, marginBottom: 10 }}>
-                <div>최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다.</div>
-                <div>언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.</div>
+              <div style={{ fontSize: 9, color: C.gray, lineHeight: 1.6, marginBottom: 6 }}>
+                최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다. 언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.
               </div>
 
-              {/* 정보 테이블 */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12, fontSize: 10, border: `1px solid ${C.border}`, tableLayout: "fixed" }}>
+              {/* 정보 테이블 - 3행 압축 */}
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8, fontSize: 9, border: `1px solid ${C.border}`, tableLayout: "fixed" }}>
                 <colgroup>
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "36%" }} />
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "36%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "22%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "24%" }} />
                 </colgroup>
                 <tbody>
-                  {[
-                    { leftLabel: "현장명", leftVal: clientSite || "(미입력)", rightLabel: "상호명", rightVal: "㈜미스터팍" },
-                    { leftLabel: "견적일", leftVal: dateStr, rightLabel: "대표", rightVal: "이지섭" },
-                    { leftLabel: "계약형태", leftVal: contractType, rightLabel: "등록번호", rightVal: "102-88-01109" },
-                    { leftLabel: "계약기간", leftVal: contractPeriod, rightLabel: "주소", rightVal: "인천광역시 연수구 갯벌로 12, 인천테크노파크 갯벌타워 1501A,B호" },
-                    { leftLabel: "운영시간", leftVal: operatingHours, rightLabel: "전화", rightVal: "1899-1871" },
-                  ].map((row, i) => {
-                    const thStyle = { padding: "5px 8px", background: "#f4f5f8", fontWeight: 700, color: C.dark, textAlign: "center", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 10, whiteSpace: "nowrap" };
-                    const tdStyle = { padding: "5px 8px", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 10, color: row.leftVal.includes("미입력") ? "#bbb" : C.dark, textAlign: "center", wordBreak: "keep-all" };
-                    const thStyleR = { ...thStyle, background: "#eef0f6", color: C.navy };
-                    const tdStyleR = { padding: "5px 8px", borderBottom: `1px solid ${C.border}`, fontSize: 10, color: C.dark, textAlign: "center", wordBreak: "keep-all" };
+                  {(() => {
+                    const th = { padding: "4px 6px", background: "#f4f5f8", fontWeight: 700, color: C.dark, textAlign: "center", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 9, whiteSpace: "nowrap" };
+                    const td = { padding: "4px 6px", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 9, textAlign: "center", wordBreak: "keep-all" };
+                    const thR = { ...th, background: "#eef0f6", color: C.navy };
                     return (
-                      <tr key={i}>
-                        <td style={thStyle}>{row.leftLabel}</td>
-                        <td style={tdStyle}>{row.leftVal}</td>
-                        <td style={thStyleR}>{row.rightLabel}</td>
-                        <td style={tdStyleR}>{row.rightVal}</td>
-                      </tr>
+                      <>
+                        <tr>
+                          <td style={th}>현장명</td>
+                          <td style={td}>{clientSite || "(미입력)"}</td>
+                          <td style={th}>계약형태</td>
+                          <td style={td}>{contractType}</td>
+                          <td style={thR}>상호명</td>
+                          <td style={td}>㈜미스터팍</td>
+                        </tr>
+                        <tr>
+                          <td style={th}>견적일</td>
+                          <td style={td}>{dateStr}</td>
+                          <td style={th}>계약기간</td>
+                          <td style={td}>{contractPeriod}</td>
+                          <td style={thR}>대표</td>
+                          <td style={td}>이지섭</td>
+                        </tr>
+                        <tr>
+                          <td style={th}>운영시간</td>
+                          <td style={td}>{operatingHours}</td>
+                          <td style={thR}>등록번호</td>
+                          <td style={td}>102-88-01109</td>
+                          <td style={thR}>전화</td>
+                          <td style={{ ...td, borderRight: "none" }}>1899-1871</td>
+                        </tr>
+                      </>
                     );
-                  })}
+                  })()}
                 </tbody>
               </table>
 
               {/* 견적 금액 하이라이트 */}
-              <div style={{ background: C.navy, borderRadius: 6, padding: "14px 16px", marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ color: C.white, fontWeight: 800, fontSize: 13 }}>견적금액 (부가세 별도)</div>
-                <div style={{ color: C.gold, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, fontFamily: numFont }}>₩ {fmt(subtotal)}</div>
+              <div style={{ background: C.navy, borderRadius: 5, padding: "10px 14px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ color: C.white, fontWeight: 800, fontSize: 11 }}>견적금액 (부가세 별도)</div>
+                <div style={{ color: C.gold, fontWeight: 900, fontSize: 18, letterSpacing: -0.5, fontFamily: numFont }}>₩ {fmt(subtotal)}</div>
               </div>
 
               {/* 상세 내역 테이블 */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16, fontSize: 11 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10, fontSize: 10 }}>
                 <thead>
                   <tr style={{ background: C.navy }}>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10, width: 30 }}>No</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10 }}>항목</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>금액</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "center", fontSize: 10, width: 40 }}>인원</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>소계</th>
+                    <th style={{ padding: "5px 6px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 9, width: 26 }}>No</th>
+                    <th style={{ padding: "5px 6px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 9 }}>항목</th>
+                    <th style={{ padding: "5px 6px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 9 }}>금액</th>
+                    <th style={{ padding: "5px 6px", color: C.white, fontWeight: 700, textAlign: "center", fontSize: 9, width: 34 }}>인원</th>
+                    <th style={{ padding: "5px 6px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 9 }}>소계</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -718,69 +732,71 @@ export default function App() {
                     { name: "발렛보험비", amount: insurance, qty: 1, sub: insurance, detail: "발렛 차량 사고 보험" },
                   ].map((row, i) => (
                     <>
-                      <tr key={i} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
-                        <td style={{ padding: "10px 8px", fontWeight: 700, color: C.navy, fontSize: 11 }}>{i + 1}</td>
-                        <td style={{ padding: "10px 8px", fontWeight: 700, fontSize: 11 }}>{row.name}</td>
-                        <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: numFont, fontSize: 11 }}>{fmt(row.amount)}</td>
-                        <td style={{ padding: "10px 8px", textAlign: "center", fontSize: 11 }}>{row.qty}</td>
-                        <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, fontFamily: numFont, fontSize: 11 }}>{fmt(row.sub)}</td>
+                      <tr key={i} style={{ borderBottom: row.detail ? "none" : `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
+                        <td style={{ padding: "6px 6px 2px", fontWeight: 700, color: C.navy, fontSize: 10 }}>{i + 1}</td>
+                        <td style={{ padding: "6px 6px 2px", fontWeight: 700, fontSize: 10 }}>{row.name}</td>
+                        <td style={{ padding: "6px 6px 2px", textAlign: "right", fontFamily: numFont, fontSize: 10 }}>{fmt(row.amount)}</td>
+                        <td style={{ padding: "6px 6px 2px", textAlign: "center", fontSize: 10 }}>{row.qty}</td>
+                        <td style={{ padding: "6px 6px 2px", textAlign: "right", fontWeight: 700, fontFamily: numFont, fontSize: 10 }}>{fmt(row.sub)}</td>
                       </tr>
-                      <tr key={`d-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td />
-                        <td colSpan={4} style={{ padding: "3px 8px 8px", fontSize: 9, color: C.gray }}>{row.detail}</td>
-                      </tr>
+                      {row.detail && (
+                        <tr key={`d-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td />
+                          <td colSpan={4} style={{ padding: "0 6px 5px", fontSize: 8, color: C.gray }}>{row.detail}</td>
+                        </tr>
+                      )}
                     </>
                   ))}
                 </tbody>
               </table>
 
               {/* 합계 영역 */}
-              <div style={{ borderTop: `2px solid ${C.navy}`, paddingTop: 12, marginBottom: 20 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
+              <div style={{ borderTop: `2px solid ${C.navy}`, paddingTop: 8, marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
                   <span style={{ color: C.gray }}>공급가액 소계</span>
                   <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(rawSubtotal)}</span>
                 </div>
                 {discountAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5, color: "#ff9800" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3, color: "#ff9800" }}>
                     <span style={{ fontWeight: 700 }}>Discount {discountMode === "percent" ? `(${discountValue}%)` : ""}</span>
                     <span style={{ fontWeight: 800, fontFamily: numFont }}>- ₩ {fmt(discountAmt)}</span>
                   </div>
                 )}
                 {discountAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
                     <span style={{ color: C.gray }}>공급가액 (Discount 적용)</span>
                     <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(subtotal)}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
                   <span style={{ color: C.gray }}>부가세 (10%)</span>
                   <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(vat)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, marginTop: 8, padding: "10px 14px", background: C.goldLight, borderRadius: 5, border: `1.5px solid ${C.gold}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 900, marginTop: 5, padding: "7px 12px", background: C.goldLight, borderRadius: 4, border: `1.5px solid ${C.gold}` }}>
                   <span style={{ color: C.navy }}>합계 (VAT 포함)</span>
                   <span style={{ color: C.navy, fontFamily: numFont }}>₩ {fmt(grandTotal)}</span>
                 </div>
               </div>
 
               {/* 운영 중점 사항 */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: C.dark, marginBottom: 10 }}>· 운영 중점 사항</div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, lineHeight: 1.8 }}>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: C.dark, marginBottom: 5 }}>· 운영 중점 사항</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9, lineHeight: 1.6 }}>
                   <tbody>
                     <tr style={{ verticalAlign: "top" }}>
-                      <td style={{ width: 120, padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>발렛요원 서비스 차별화</td>
-                      <td style={{ padding: "8px 0 8px 14px", color: C.dark }}>
+                      <td style={{ width: 100, padding: "4px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>발렛요원 서비스 차별화</td>
+                      <td style={{ padding: "4px 0 4px 10px", color: C.dark }}>
                         <div>-전문 서비스 강사 교육 이수자 현장 투입</div>
                         <div>-고객 편의를 고려하는 감성 케어 서비스 제공</div>
                         <div>-매월 고객사 의견 수렴, 서비스 태도 부족 시 <strong>경고 및 교체 처리</strong></div>
                       </td>
                     </tr>
                     <tr style={{ verticalAlign: "top" }}>
-                      <td style={{ padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>현장 불편 최소화</td>
-                      <td style={{ padding: "8px 0 8px 14px", color: C.dark }}>
-                        <div>-<strong>국내 유일 발렛 전용(주차장 및 도로) 보험 소유 (DB손해보험, 현대해상)</strong></div>
-                        <div>-고객 차량 사고 시 보험 처리로 발생되는 자기 부담금 당사 전체 부담</div>
-                        <div>-발렛비(주차 요금) 징수 방법 고객사 선택 가능 (현금, 카드 등) 필요시</div>
+                      <td style={{ padding: "4px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>현장 불편 최소화</td>
+                      <td style={{ padding: "4px 0 4px 10px", color: C.dark }}>
+                        <div>-<strong>국내 유일 발렛 전용 보험 소유 (DB손해보험, 현대해상)</strong></div>
+                        <div>-고객 차량 사고 시 자기 부담금 당사 전체 부담</div>
+                        <div>-발렛비 징수 방법 고객사 선택 가능 (현금, 카드 등)</div>
                       </td>
                     </tr>
                   </tbody>
@@ -788,10 +804,10 @@ export default function App() {
               </div>
 
               {/* 하단 구분선 */}
-              <div style={{ height: 2, background: C.gold, borderRadius: 2, marginBottom: 12 }} />
+              <div style={{ height: 2, background: C.gold, borderRadius: 2, marginBottom: 8 }} />
 
               {/* 최하단 */}
-              <div style={{ textAlign: "center", fontSize: 8, color: "#bbb" }}>
+              <div style={{ textAlign: "center", fontSize: 7, color: "#bbb" }}>
                 본 견적서는 (주)미스터팍 견적시스템에서 자동 생성되었습니다.
               </div>
             </div>
