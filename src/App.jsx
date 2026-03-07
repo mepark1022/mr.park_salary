@@ -370,7 +370,7 @@ export default function App() {
                 onChange={(e) => setOpFund(parseInt(e.target.value))}
                 style={{ width: "100%", accentColor: C.gold, marginBottom: 10 }} />
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
-                {[1000000, 2000000, 3000000, 4000000, 5000000].map((v) => (
+                {[1000000, 2000000, 3000000, 4000000].map((v) => (
                   <button key={v} onClick={() => setOpFund(v)} style={{
                     padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: "pointer",
                     border: `2px solid ${opFund === v ? C.navy : C.lightGray}`,
@@ -378,6 +378,9 @@ export default function App() {
                     color: opFund === v ? C.gold : C.gray, transition: "all 0.2s",
                   }}>{v / 10000}만</button>
                 ))}
+                <MoneyInput value={opFund} onChange={setOpFund}
+                  inputStyle={{ ...inputStyle, fontSize: 13, fontWeight: 800, textAlign: "center", padding: "8px 4px", borderRadius: 8 }}
+                  goldColor={C.gold} grayColor={C.lightGray} />
               </div>
             </div>
             <div style={{ padding: 20, background: "#F7F8FC", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -398,7 +401,7 @@ export default function App() {
                 onChange={(e) => setInsurance(parseInt(e.target.value))}
                 style={{ width: "100%", accentColor: C.gold, marginBottom: 10 }} />
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-                {[500000, 1000000, 1500000, 2000000].map((v) => (
+                {[500000, 1000000, 1500000].map((v) => (
                   <button key={v} onClick={() => setInsurance(v)} style={{
                     padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: "pointer",
                     border: `2px solid ${insurance === v ? C.navy : C.lightGray}`,
@@ -406,6 +409,9 @@ export default function App() {
                     color: insurance === v ? C.gold : C.gray, transition: "all 0.2s",
                   }}>{v / 10000}만</button>
                 ))}
+                <MoneyInput value={insurance} onChange={setInsurance}
+                  inputStyle={{ ...inputStyle, fontSize: 13, fontWeight: 800, textAlign: "center", padding: "8px 4px", borderRadius: 8 }}
+                  goldColor={C.gold} grayColor={C.lightGray} />
               </div>
             </div>
             <div style={{ padding: 20, background: "#F7F8FC", display: "flex", alignItems: "center", justifyContent: "center" }}>
