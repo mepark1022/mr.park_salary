@@ -53,6 +53,42 @@ const C = {
   orange: "#E97132",
 };
 
+/* 금액 입력 컴포넌트 - 포커스 시 숫자만, 블러 시 콤마 포맷 */
+function MoneyInput({ value, onChange, style: s, inputStyle: baseStyle, goldColor, grayColor }) {
+  const [editing, setEditing] = useState(false);
+  const [raw, setRaw] = useState(String(value));
+
+  const handleFocus = (e) => {
+    setEditing(true);
+    setRaw(value === 0 ? "" : String(value));
+    e.target.style.borderColor = goldColor;
+  };
+  const handleBlur = (e) => {
+    setEditing(false);
+    const num = parseInt(raw.replace(/[^0-9]/g, "")) || 0;
+    onChange(num);
+    e.target.style.borderColor = grayColor;
+  };
+  const handleChange = (e) => {
+    const v = e.target.value.replace(/[^0-9]/g, "");
+    setRaw(v);
+    const num = parseInt(v) || 0;
+    onChange(num);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={editing ? raw : value.toLocaleString("ko-KR")}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onChange={handleChange}
+      style={{ ...baseStyle, ...s }}
+    />
+  );
+}
+
 export default function App() {
   const [wdSalary, setWdSalary] = useState(2200000);
   const [wdStart, setWdStart] = useState("09:00");
@@ -196,8 +232,8 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 10, marginBottom: 12 }}>
                 <div>
                   <label style={labelStyle}>급여 (월급 총액)</label>
-                  <Input type="text" value={wdSalary.toLocaleString("ko-KR")}
-                    onChange={(e) => setWdSalary(parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0)}
+                  <MoneyInput value={wdSalary} onChange={setWdSalary}
+                    inputStyle={inputStyle} goldColor={C.gold} grayColor={C.lightGray}
                     style={{ fontSize: 17 }} />
                 </div>
                 <div>
@@ -269,8 +305,8 @@ export default function App() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 10, marginBottom: 12 }}>
                     <div>
                       <label style={labelStyle}>일당 (1일 금액)</label>
-                      <Input type="text" value={weDailyWage.toLocaleString("ko-KR")}
-                        onChange={(e) => setWeDailyWage(parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0)}
+                      <MoneyInput value={weDailyWage} onChange={setWeDailyWage}
+                        inputStyle={inputStyle} goldColor={C.gold} grayColor={C.lightGray}
                         style={{ fontSize: 17 }} />
                     </div>
                     <div>
