@@ -641,10 +641,10 @@ export default function App() {
                   <div style={{ height: 2, width: 60, background: C.gold, borderRadius: 2, marginTop: 8 }} />
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <svg width="45" height="42" viewBox="0 0 120 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="30,0 60,90 72,90 18,0" fill="#F5B731"/>
-                    <polygon points="60,90 72,90 95,20 82,20" fill="#F5B731"/>
-                    <polygon points="88,5 100,5 105,0 96,0" fill="#F5B731"/>
+                  <svg width="42" height="44" viewBox="0 0 100 105" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="22,0 38,0 56,82 52,95 44,95 48,82" fill="#F5B731"/>
+                    <polygon points="48,82 52,95 56,95 60,82 80,18 72,18" fill="#F5B731"/>
+                    <polygon points="76,8 82,0 88,0 78,14" fill="#F5B731"/>
                   </svg>
                   <div style={{ fontSize: 7, fontWeight: 900, color: C.gold, letterSpacing: 2, marginTop: 1 }}>VALETMAN</div>
                   <div style={{ fontSize: 6, color: "rgba(255,255,255,0.5)", letterSpacing: 1 }}>MEMBERS</div>
