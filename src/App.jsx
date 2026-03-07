@@ -327,7 +327,7 @@ export default function App() {
                   <input type="time" value={wdStart} onChange={e => setWdStart(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
                   <span style={{ color: C.gray }}>~</span>
                   <input type="time" value={wdEnd} onChange={e => setWdEnd(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
-                  <input type="number" value={wdBreak} min={0} step={30} onChange={e => setWdBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 56, textAlign: "center" }} />
+                  <input type="number" value={wdBreak} min={0} step={30} onChange={e => setWdBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 70, textAlign: "center" }} />
                   <span style={{ fontSize: 11, color: C.gray, whiteSpace: "nowrap" }}>분 휴게</span>
                 </div>
                 <div style={{ display: "flex", gap: 12, fontSize: 11, color: C.navy, fontWeight: 700 }}>
@@ -396,7 +396,7 @@ export default function App() {
                       <input type="time" value={weStart} onChange={e => setWeStart(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
                       <span style={{ color: C.gray }}>~</span>
                       <input type="time" value={weEnd} onChange={e => setWeEnd(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
-                      <input type="number" value={weBreak} min={0} step={30} onChange={e => setWeBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 56, textAlign: "center" }} />
+                      <input type="number" value={weBreak} min={0} step={30} onChange={e => setWeBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 70, textAlign: "center" }} />
                       <span style={{ fontSize: 11, color: C.gray, whiteSpace: "nowrap" }}>분 휴게</span>
                     </div>
                     <div style={{ fontSize: 11, color: C.navy, fontWeight: 700 }}>
