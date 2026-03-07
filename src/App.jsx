@@ -636,16 +636,19 @@ export default function App() {
             }}>
 
               {/* 타이틀 + 로고 */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 900, color: C.dark, margin: 0, letterSpacing: -0.5 }}>주차관리 서비스 견적서</h1>
+              <div style={{ background: C.navy, borderRadius: 8, padding: "18px 24px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: C.white, margin: 0, letterSpacing: 1 }}>주차관리 서비스 견적서</div>
+                  <div style={{ height: 2, width: 60, background: C.gold, borderRadius: 2, marginTop: 8 }} />
+                </div>
                 <div style={{ textAlign: "center" }}>
-                  <svg width="55" height="52" viewBox="0 0 120 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="45" height="42" viewBox="0 0 120 110" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <polygon points="30,0 60,90 72,90 18,0" fill="#F5B731"/>
                     <polygon points="60,90 72,90 95,20 82,20" fill="#F5B731"/>
                     <polygon points="88,5 100,5 105,0 96,0" fill="#F5B731"/>
                   </svg>
-                  <div style={{ fontSize: 8, fontWeight: 900, color: C.dark, letterSpacing: 2, marginTop: 2 }}>VALETMAN</div>
-                  <div style={{ fontSize: 7, color: C.gray, letterSpacing: 1 }}>MEMBERS</div>
+                  <div style={{ fontSize: 7, fontWeight: 900, color: C.gold, letterSpacing: 2, marginTop: 1 }}>VALETMAN</div>
+                  <div style={{ fontSize: 6, color: "rgba(255,255,255,0.5)", letterSpacing: 1 }}>MEMBERS</div>
                 </div>
               </div>
 
