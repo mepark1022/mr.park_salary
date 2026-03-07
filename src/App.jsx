@@ -675,20 +675,20 @@ export default function App() {
               </table>
 
               {/* 견적 금액 하이라이트 */}
-              <div style={{ background: C.navy, borderRadius: 6, padding: "10px 16px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ color: C.white, fontWeight: 800, fontSize: 12 }}>견적금액 (부가세 별도)</div>
-                <div style={{ color: C.gold, fontWeight: 900, fontSize: 20, letterSpacing: -0.5, fontFamily: numFont }}>₩ {fmt(subtotal)}</div>
+              <div style={{ background: C.navy, borderRadius: 6, padding: "14px 16px", marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ color: C.white, fontWeight: 800, fontSize: 13 }}>견적금액 (부가세 별도)</div>
+                <div style={{ color: C.gold, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, fontFamily: numFont }}>₩ {fmt(subtotal)}</div>
               </div>
 
               {/* 상세 내역 테이블 */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10, fontSize: 11 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16, fontSize: 11 }}>
                 <thead>
                   <tr style={{ background: C.navy }}>
-                    <th style={{ padding: "5px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10, width: 30 }}>No</th>
-                    <th style={{ padding: "5px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10 }}>항목</th>
-                    <th style={{ padding: "5px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>금액</th>
-                    <th style={{ padding: "5px 8px", color: C.white, fontWeight: 700, textAlign: "center", fontSize: 10, width: 40 }}>인원</th>
-                    <th style={{ padding: "5px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>소계</th>
+                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10, width: 30 }}>No</th>
+                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10 }}>항목</th>
+                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>금액</th>
+                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "center", fontSize: 10, width: 40 }}>인원</th>
+                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>소계</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -700,15 +700,15 @@ export default function App() {
                   ].map((row, i) => (
                     <>
                       <tr key={row.no} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
-                        <td style={{ padding: "6px 8px", fontWeight: 700, color: C.navy, fontSize: 11 }}>{row.no}</td>
-                        <td style={{ padding: "6px 8px", fontWeight: 700, fontSize: 11 }}>{row.name}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: numFont, fontSize: 11 }}>{fmt(row.amount)}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "center", fontSize: 11 }}>{row.qty}</td>
-                        <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, fontFamily: numFont, fontSize: 11 }}>{fmt(row.sub)}</td>
+                        <td style={{ padding: "10px 8px", fontWeight: 700, color: C.navy, fontSize: 11 }}>{row.no}</td>
+                        <td style={{ padding: "10px 8px", fontWeight: 700, fontSize: 11 }}>{row.name}</td>
+                        <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: numFont, fontSize: 11 }}>{fmt(row.amount)}</td>
+                        <td style={{ padding: "10px 8px", textAlign: "center", fontSize: 11 }}>{row.qty}</td>
+                        <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, fontFamily: numFont, fontSize: 11 }}>{fmt(row.sub)}</td>
                       </tr>
                       <tr key={`d-${row.no}`} style={{ borderBottom: `1px solid ${C.border}` }}>
                         <td />
-                        <td colSpan={4} style={{ padding: "2px 8px 5px", fontSize: 9, color: C.gray }}>{row.detail}</td>
+                        <td colSpan={4} style={{ padding: "3px 8px 8px", fontSize: 9, color: C.gray }}>{row.detail}</td>
                       </tr>
                     </>
                   ))}
@@ -716,49 +716,49 @@ export default function App() {
               </table>
 
               {/* 합계 영역 */}
-              <div style={{ borderTop: `2px solid ${C.navy}`, paddingTop: 8, marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+              <div style={{ borderTop: `2px solid ${C.navy}`, paddingTop: 12, marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
                   <span style={{ color: C.gray }}>공급가액 소계</span>
                   <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(rawSubtotal)}</span>
                 </div>
                 {discountAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2, color: "#ff9800" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5, color: "#ff9800" }}>
                     <span style={{ fontWeight: 700 }}>에누리 {discountMode === "percent" ? `(${discountValue}%)` : ""}</span>
                     <span style={{ fontWeight: 800, fontFamily: numFont }}>- ₩ {fmt(discountAmt)}</span>
                   </div>
                 )}
                 {discountAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
                     <span style={{ color: C.gray }}>공급가액 (에누리 적용)</span>
                     <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(subtotal)}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
                   <span style={{ color: C.gray }}>부가세 (10%)</span>
                   <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(vat)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 900, marginTop: 6, padding: "8px 12px", background: C.goldLight, borderRadius: 5, border: `1.5px solid ${C.gold}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, marginTop: 8, padding: "10px 14px", background: C.goldLight, borderRadius: 5, border: `1.5px solid ${C.gold}` }}>
                   <span style={{ color: C.navy }}>합계 (VAT 포함)</span>
                   <span style={{ color: C.navy, fontFamily: numFont }}>₩ {fmt(grandTotal)}</span>
                 </div>
               </div>
 
               {/* 운영 중점 사항 */}
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: C.dark, marginBottom: 6 }}>· 운영 중점 사항</div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, lineHeight: 1.6 }}>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: C.dark, marginBottom: 10 }}>· 운영 중점 사항</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, lineHeight: 1.8 }}>
                   <tbody>
                     <tr style={{ verticalAlign: "top" }}>
-                      <td style={{ width: 110, padding: "4px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>발렛요원 서비스 차별화</td>
-                      <td style={{ padding: "4px 0 4px 12px", color: C.dark }}>
+                      <td style={{ width: 120, padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>발렛요원 서비스 차별화</td>
+                      <td style={{ padding: "8px 0 8px 14px", color: C.dark }}>
                         <div>-전문 서비스 강사 교육 이수자 현장 투입</div>
                         <div>-고객 편의를 고려하는 감성 케어 서비스 제공</div>
                         <div>-매월 고객사 의견 수렴, 서비스 태도 부족 시 <strong>경고 및 교체 처리</strong></div>
                       </td>
                     </tr>
                     <tr style={{ verticalAlign: "top" }}>
-                      <td style={{ padding: "4px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>현장 불편 최소화</td>
-                      <td style={{ padding: "4px 0 4px 12px", color: C.dark }}>
+                      <td style={{ padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>현장 불편 최소화</td>
+                      <td style={{ padding: "8px 0 8px 14px", color: C.dark }}>
                         <div>-<strong>국내 유일 발렛 전용(주차장 및 도로) 보험 소유 (DB손해보험, 현대해상)</strong></div>
                         <div>-고객 차량 사고 시 보험 처리로 발생되는 자기 부담금 당사 전체 부담</div>
                         <div>-발렛비(주차 요금) 징수 방법 고객사 선택 가능 (현금, 카드 등) 필요시</div>
@@ -769,7 +769,7 @@ export default function App() {
               </div>
 
               {/* 하단 구분선 */}
-              <div style={{ height: 2, background: C.gold, borderRadius: 2, marginBottom: 8 }} />
+              <div style={{ height: 2, background: C.gold, borderRadius: 2, marginBottom: 12 }} />
 
               {/* 최하단 */}
               <div style={{ textAlign: "center", fontSize: 8, color: "#bbb" }}>
