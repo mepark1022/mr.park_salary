@@ -70,12 +70,15 @@ function calcWeekend(dailyPay, headcount, days, start, end, breakMin) {
   return { dailyPay, monthlyPay, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, days, headcount };
 }
 
-/* 비밀번호 해시 (간단 해시) */
-const PW_HASH = "b7d98452";
+/* 비밀번호 해시 */
+const DEFAULT_PW_HASH = "b7d98452";
 function simpleHash(str) {
   let h = 0;
   for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
   return (h >>> 0).toString(16).slice(0, 8);
+}
+function getSavedHash() {
+  try { return localStorage.getItem("mrpark_pw_hash") || DEFAULT_PW_HASH; } catch { return DEFAULT_PW_HASH; }
 }
 
 export default function App() {
@@ -85,14 +88,43 @@ export default function App() {
   const [pw, setPw] = useState("");
   const [pwErr, setPwErr] = useState(false);
 
+  /* 비밀번호 변경 */
+  const [showPwChange, setShowPwChange] = useState(false);
+  const [cpCurrent, setCpCurrent] = useState("");
+  const [cpNew, setCpNew] = useState("");
+  const [cpConfirm, setCpConfirm] = useState("");
+  const [cpMsg, setCpMsg] = useState({ text: "", ok: false });
+
   const handleLogin = () => {
-    if (simpleHash(pw) === PW_HASH) {
+    if (simpleHash(pw) === getSavedHash()) {
       setAuthed(true);
       try { sessionStorage.setItem("mrpark_auth", "1"); } catch {}
     } else {
       setPwErr(true);
       setTimeout(() => setPwErr(false), 1500);
     }
+  };
+
+  const handleLogout = () => {
+    setAuthed(false);
+    setPw("");
+    try { sessionStorage.removeItem("mrpark_auth"); } catch {}
+  };
+
+  const handlePwChange = () => {
+    if (simpleHash(cpCurrent) !== getSavedHash()) {
+      setCpMsg({ text: "현재 비밀번호가 일치하지 않습니다", ok: false }); return;
+    }
+    if (cpNew.length < 4) {
+      setCpMsg({ text: "새 비밀번호는 4자 이상이어야 합니다", ok: false }); return;
+    }
+    if (cpNew !== cpConfirm) {
+      setCpMsg({ text: "새 비밀번호가 일치하지 않습니다", ok: false }); return;
+    }
+    try { localStorage.setItem("mrpark_pw_hash", simpleHash(cpNew)); } catch {}
+    setCpMsg({ text: "비밀번호가 변경되었습니다!", ok: true });
+    setCpCurrent(""); setCpNew(""); setCpConfirm("");
+    setTimeout(() => { setShowPwChange(false); setCpMsg({ text: "", ok: false }); }, 1200);
   };
 
   if (!authed) {
@@ -113,8 +145,7 @@ export default function App() {
             style={{
               width: "100%", padding: "14px 16px", border: `2px solid ${pwErr ? "#E53935" : "#dde0e8"}`,
               borderRadius: 12, fontSize: 15, outline: "none", textAlign: "center",
-              background: pwErr ? "#fff5f5" : "#f8f9fb",
-              transition: "all 0.2s",
+              background: pwErr ? "#fff5f5" : "#f8f9fb", transition: "all 0.2s",
             }}
           />
           {pwErr && <div style={{ color: "#E53935", fontSize: 12, fontWeight: 700, marginTop: 8 }}>비밀번호가 일치하지 않습니다</div>}
@@ -223,11 +254,39 @@ export default function App() {
       {/* ═══ 헤더 ═══ */}
       <div style={{ background: C.navy, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 12px rgba(20,40,160,0.3)" }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 14, color: C.navy }}>P</div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ color: C.white, fontWeight: 900, fontSize: 16, letterSpacing: -0.5 }}>(주)미스터팍 발렛맨 서비스</div>
           <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>견적 산출 · 견적서 자동 생성 시스템 · 2026</div>
         </div>
+        <button onClick={() => { setShowPwChange(true); setCpMsg({ text: "", ok: false }); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>🔒 비밀번호 변경</button>
+        <button onClick={handleLogout} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>로그아웃</button>
       </div>
+
+      {/* ═══ 비밀번호 변경 모달 ═══ */}
+      {showPwChange && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={() => setShowPwChange(false)}>
+          <div style={{ width: 380, background: C.white, borderRadius: 16, padding: "32px 28px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 900, fontSize: 16, color: C.navy, marginBottom: 20 }}>🔒 비밀번호 변경</div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 4 }}>현재 비밀번호</label>
+              <input type="password" value={cpCurrent} onChange={e => setCpCurrent(e.target.value)} placeholder="현재 비밀번호" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: "none" }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 4 }}>새 비밀번호</label>
+              <input type="password" value={cpNew} onChange={e => setCpNew(e.target.value)} placeholder="새 비밀번호 (4자 이상)" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: "none" }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 4 }}>새 비밀번호 확인</label>
+              <input type="password" value={cpConfirm} onChange={e => setCpConfirm(e.target.value)} onKeyDown={e => e.key === "Enter" && handlePwChange()} placeholder="새 비밀번호 확인" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: "none" }} />
+            </div>
+            {cpMsg.text && <div style={{ fontSize: 12, fontWeight: 700, color: cpMsg.ok ? C.green : C.red, marginBottom: 12, textAlign: "center" }}>{cpMsg.text}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowPwChange(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.white, color: C.gray, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>취소</button>
+              <button onClick={handlePwChange} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: C.navy, color: C.white, fontWeight: 900, fontSize: 13, cursor: "pointer" }}>변경</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ 2컬럼 레이아웃 ═══ */}
       <div style={{ display: "flex", gap: 0, maxWidth: 1440, margin: "0 auto", minHeight: "calc(100vh - 64px)" }}>
