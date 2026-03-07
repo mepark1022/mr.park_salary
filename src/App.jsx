@@ -70,7 +70,66 @@ function calcWeekend(dailyPay, headcount, days, start, end, breakMin) {
   return { dailyPay, monthlyPay, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, days, headcount };
 }
 
+/* 비밀번호 해시 (간단 해시) */
+const PW_HASH = "b7d98452";
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
+  return (h >>> 0).toString(16).slice(0, 8);
+}
+
 export default function App() {
+  const [authed, setAuthed] = useState(() => {
+    try { return sessionStorage.getItem("mrpark_auth") === "1"; } catch { return false; }
+  });
+  const [pw, setPw] = useState("");
+  const [pwErr, setPwErr] = useState(false);
+
+  const handleLogin = () => {
+    if (simpleHash(pw) === PW_HASH) {
+      setAuthed(true);
+      try { sessionStorage.setItem("mrpark_auth", "1"); } catch {}
+    } else {
+      setPwErr(true);
+      setTimeout(() => setPwErr(false), 1500);
+    }
+  };
+
+  if (!authed) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a1654 0%, #1428A0 50%, #1e3ab8 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Noto Sans KR','맑은 고딕',sans-serif" }}>
+        <div style={{ width: 360, background: "#fff", borderRadius: 20, padding: "48px 36px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#1428A0", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#F5B731", fontWeight: 900, fontSize: 28 }}>P</span>
+          </div>
+          <div style={{ fontWeight: 900, fontSize: 18, color: "#1428A0", marginBottom: 4 }}>(주)미스터팍</div>
+          <div style={{ fontSize: 12, color: "#999", marginBottom: 32 }}>발렛맨 서비스 견적 시스템</div>
+          <input
+            type="password"
+            value={pw}
+            onChange={e => setPw(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleLogin()}
+            placeholder="비밀번호를 입력하세요"
+            style={{
+              width: "100%", padding: "14px 16px", border: `2px solid ${pwErr ? "#E53935" : "#dde0e8"}`,
+              borderRadius: 12, fontSize: 15, outline: "none", textAlign: "center",
+              background: pwErr ? "#fff5f5" : "#f8f9fb",
+              transition: "all 0.2s",
+            }}
+          />
+          {pwErr && <div style={{ color: "#E53935", fontSize: 12, fontWeight: 700, marginTop: 8 }}>비밀번호가 일치하지 않습니다</div>}
+          <button onClick={handleLogin} style={{
+            width: "100%", marginTop: 16, padding: "14px 0", borderRadius: 12, border: "none",
+            background: "#1428A0", color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(20,40,160,0.3)",
+          }}>
+            로그인
+          </button>
+          <div style={{ marginTop: 24, fontSize: 10, color: "#ccc" }}>© 2026 Mr. Park Co., Ltd.</div>
+        </div>
+      </div>
+    );
+  }
   /* ── 견적산출표 state ── */
   const [wdSalary, setWdSalary] = useState(2200000);
   const [wdHead, setWdHead] = useState(1);
