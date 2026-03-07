@@ -91,6 +91,7 @@ export default function App() {
   /* ── 에누리 ── */
   const [discountMode, setDiscountMode] = useState("amount"); // "amount" | "percent"
   const [discountValue, setDiscountValue] = useState(0);
+  const [discountInput, setDiscountInput] = useState("");
 
   /* ── 견적서 폼 state ── */
   const [clientSite, setClientSite] = useState("");
@@ -402,13 +403,13 @@ export default function App() {
               {/* 모드 선택 */}
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                 {[["amount", "금액 직접입력"], ["percent", "% 할인율"]].map(([k, v]) => (
-                  <button key={k} onClick={() => { setDiscountMode(k); setDiscountValue(0); }}
+                  <button key={k} onClick={() => { setDiscountMode(k); setDiscountValue(0); setDiscountInput(""); }}
                     style={discountMode === k ? { ...chipActive, background: "#ff9800", borderColor: "#ff9800" } : chipInactive}>
                     {v}
                   </button>
                 ))}
                 {discountAmt > 0 && (
-                  <button onClick={() => setDiscountValue(0)}
+                  <button onClick={() => { setDiscountValue(0); setDiscountInput(""); }}
                     style={{ ...chipInactive, color: C.red, borderColor: C.red, marginLeft: "auto", fontSize: 11 }}>
                     초기화
                   </button>
@@ -441,7 +442,7 @@ export default function App() {
                   {/* 금액 버튼 */}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                     {[100000, 200000, 300000, 500000].map(v => (
-                      <button key={v} onClick={() => setDiscountValue(v)}
+                      <button key={v} onClick={() => { setDiscountValue(v); setDiscountInput(fmt(v)); }}
                         style={discountValue === v
                           ? { ...chipActive, background: "#ff9800", borderColor: "#ff9800" }
                           : chipInactive}>
@@ -449,8 +450,15 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <input type="text" value={fmt(discountValue)}
-                    onChange={e => setDiscountValue(Math.max(0, parseInt(e.target.value.replace(/,/g,"")) || 0))}
+                  <input type="text" value={discountInput}
+                    onFocus={e => { if (discountValue === 0) setDiscountInput(""); }}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/,/g, "");
+                      if (raw === "") { setDiscountInput(""); setDiscountValue(0); return; }
+                      const num = parseInt(raw);
+                      if (!isNaN(num)) { setDiscountInput(fmt(num)); setDiscountValue(Math.max(0, num)); }
+                    }}
+                    placeholder="할인 금액 직접 입력"
                     style={{ ...inputStyle, fontWeight: 800, fontSize: 16, textAlign: "right" }} />
                   {discountValue > 0 && rawSubtotal > 0 && (
                     <div style={{ textAlign: "right", fontSize: 11, color: "#ff9800", marginTop: 4, fontWeight: 700 }}>
