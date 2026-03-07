@@ -45,15 +45,16 @@ function calcWeekday(salary, headcount, start, end, breakMin) {
   const actualH = Math.max(0, (totalMin - breakMin) / 60);
   const weeklyH = actualH * 5;
   const hasWL = weeklyH >= 15;
+  const hasRetirement = weeklyH >= 15;
   const wlH = hasWL ? actualH : 0;
   const monthlyBasicH = weeklyH * WEEKS;
   const monthlyWLH = wlH * WEEKS;
   const ins = calcEmployerIns(salary);
-  const retirement = Math.round(salary / 12);
+  const retirement = hasRetirement ? Math.round(salary / 12) : 0;
   const perPerson = salary + ins.total + retirement;
   const totalPaidH = monthlyBasicH + monthlyWLH;
   const hrCost = totalPaidH > 0 ? Math.round(perPerson / totalPaidH) : 0;
-  return { salary, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, weeklyH, hasWL, headcount };
+  return { salary, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, weeklyH, hasWL, hasRetirement, headcount };
 }
 
 /* 주말 인건비 산출 */
@@ -62,12 +63,14 @@ function calcWeekend(dailyPay, headcount, days, start, end, breakMin) {
   const eh = parseInt(end.split(":")[0]), em = parseInt(end.split(":")[1]);
   const totalMin = (eh * 60 + em) - (sh * 60 + sm);
   const actualH = Math.max(0, (totalMin - breakMin) / 60);
+  const weeklyH = actualH * days;
+  const hasRetirement = weeklyH >= 15;
   const monthlyPay = dailyPay * days * 5;
   const ins = calcEmployerIns(monthlyPay);
-  const retirement = Math.round(monthlyPay / 12);
+  const retirement = hasRetirement ? Math.round(monthlyPay / 12) : 0;
   const perPerson = monthlyPay + ins.total + retirement;
   const hrCost = actualH > 0 ? Math.round(perPerson / (actualH * days * WEEKS)) : 0;
-  return { dailyPay, monthlyPay, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, days, headcount };
+  return { dailyPay, monthlyPay, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, weeklyH, hasRetirement, days, headcount };
 }
 
 /* 비밀번호 해시 */
@@ -304,7 +307,7 @@ export default function App() {
 
           {/* ── 1. 인건비 ── */}
           <div style={{ background: C.white, borderRadius: 12, marginBottom: 12, overflow: "hidden", border: `1px solid ${C.border}` }}>
-            {sectionHeader("1", "인건비", "급여 + 사업주 4대보험 + 퇴직충당금")}
+            {sectionHeader("1", "인건비", "급여 + 사업주 4대보험 + 퇴직충당금(주15h↑)")}
             <div style={{ padding: 16 }}>
 
               {/* 평일 */}
@@ -343,13 +346,16 @@ export default function App() {
                   {[
                     ["급여", weekday.salary],
                     ["사업주 4대보험", weekday.ins.total],
-                    ["퇴직충당금 (÷12)", weekday.retirement],
+                    ...(weekday.hasRetirement ? [["퇴직충당금 (÷12)", weekday.retirement]] : []),
                   ].map(([l, v]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
                       <span style={{ color: C.gray }}>{l}</span>
                       <span style={{ fontWeight: 700, fontFamily: numFont }}>{fmt(v)}원</span>
                     </div>
                   ))}
+                  {!weekday.hasRetirement && (
+                    <div style={{ fontSize: 10, color: "#e53935", marginBottom: 2 }}>※ 주 {weekday.weeklyH.toFixed(1)}h — 15h 미만으로 퇴직충당금 미적용</div>
+                  )}
                   <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                     <span style={{ fontWeight: 800 }}>1인 합계</span>
                     <span style={{ fontWeight: 900, color: C.navy, fontSize: 13, fontFamily: numFont }}>{fmt(weekday.perPerson)}원</span>
@@ -401,7 +407,7 @@ export default function App() {
                       <span style={{ fontSize: 11, color: C.gray, whiteSpace: "nowrap" }}>분 휴게</span>
                     </div>
                     <div style={{ fontSize: 11, color: C.navy, fontWeight: 700 }}>
-                      실근무 {weekend.actualH.toFixed(1)}h/일
+                      실근무 {weekend.actualH.toFixed(1)}h/일 · <span style={{ color: weekend.hasRetirement ? C.navy : "#e53935" }}>주 {weekend.weeklyH.toFixed(1)}h</span>
                     </div>
 
                     <div style={{ marginTop: 10, background: C.lightGray, borderRadius: 8, padding: 10 }}>
@@ -409,13 +415,16 @@ export default function App() {
                       {[
                         [`일당 × ${weDays}일 × 5주`, weekend.monthlyPay],
                         ["사업주 4대보험", weekend.ins.total],
-                        ["퇴직충당금 (÷12)", weekend.retirement],
+                        ...(weekend.hasRetirement ? [["퇴직충당금 (÷12)", weekend.retirement]] : []),
                       ].map(([l, v]) => (
                         <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
                           <span style={{ color: C.gray }}>{l}</span>
                           <span style={{ fontWeight: 700, fontFamily: numFont }}>{fmt(v)}원</span>
                         </div>
                       ))}
+                      {!weekend.hasRetirement && (
+                        <div style={{ fontSize: 10, color: "#e53935", marginBottom: 2 }}>※ 주 {weekend.weeklyH.toFixed(1)}h — 15h 미만으로 퇴직충당금 미적용</div>
+                      )}
                       <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                         <span style={{ fontWeight: 800 }}>1인 합계</span>
                         <span style={{ fontWeight: 900, color: C.navy, fontSize: 13, fontFamily: numFont }}>{fmt(weekend.perPerson)}원</span>
@@ -703,7 +712,7 @@ export default function App() {
                 </thead>
                 <tbody>
                   {[
-                    { no: 1, name: "인건비 (평일 / 주5일)", amount: weekday.perPerson, qty: wdHead, sub: laborWeekday, detail: `월급 ${fmt(wdSalary)}원 + 4대보험 + 퇴직충당금` },
+                    { no: 1, name: "인건비 (평일 / 주5일)", amount: weekday.perPerson, qty: wdHead, sub: laborWeekday, detail: `월급 ${fmt(wdSalary)}원 + 4대보험${weekday.hasRetirement ? " + 퇴직충당금" : ""}` },
                     ...(weDays > 0 ? [{ no: 2, name: `인건비 (주말 / 주${weDays}일)`, amount: weekend.perPerson, qty: weHead, sub: laborWeekend }] : []),
                     { no: weDays > 0 ? 3 : 2, name: "운영지원금", amount: opSupport, qty: 1, sub: opSupport, detail: "운영관리 + 사고 리스크 대비" },
                     { no: weDays > 0 ? 4 : 3, name: "발렛보험비", amount: insurance, qty: 1, sub: insurance, detail: "발렛 차량 사고 보험" },
