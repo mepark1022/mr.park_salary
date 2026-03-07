@@ -225,7 +225,6 @@ export default function App() {
     const el = printRef.current;
     if (!el) return;
     let html = el.innerHTML;
-    html = html.replace(/src="\/logo-gold\.png"/g, `src="${window.location.origin}/logo-gold.png"`);
     const w = window.open("", "_blank");
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>견적서</title>
       <link rel="stylesheet" href="${FONT_LINK}">
@@ -640,7 +639,11 @@ export default function App() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                 <h1 style={{ fontSize: 22, fontWeight: 900, color: C.dark, margin: 0, letterSpacing: -0.5 }}>주차관리 서비스 견적서</h1>
                 <div style={{ textAlign: "center" }}>
-                  <img src="/logo-gold.png" alt="VALETMAN" style={{ height: 50 }} />
+                  <svg width="55" height="52" viewBox="0 0 120 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="30,0 60,90 72,90 18,0" fill="#F5B731"/>
+                    <polygon points="60,90 72,90 95,20 82,20" fill="#F5B731"/>
+                    <polygon points="88,5 100,5 105,0 96,0" fill="#F5B731"/>
+                  </svg>
                   <div style={{ fontSize: 8, fontWeight: 900, color: C.dark, letterSpacing: 2, marginTop: 2 }}>VALETMAN</div>
                   <div style={{ fontSize: 7, color: C.gray, letterSpacing: 1 }}>MEMBERS</div>
                 </div>
