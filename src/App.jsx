@@ -638,8 +638,8 @@ export default function App() {
 
               {/* 인사말 */}
               <div style={{ fontSize: 10, color: C.gray, lineHeight: 1.7, marginBottom: 10 }}>
-                최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다.
-                언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.
+                <div>최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다.</div>
+                <div>언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.</div>
               </div>
 
               {/* 정보 테이블 */}
