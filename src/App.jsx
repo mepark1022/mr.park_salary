@@ -45,16 +45,15 @@ function calcWeekday(salary, headcount, start, end, breakMin) {
   const actualH = Math.max(0, (totalMin - breakMin) / 60);
   const weeklyH = actualH * 5;
   const hasWL = weeklyH >= 15;
-  const hasRetirement = weeklyH >= 15;
   const wlH = hasWL ? actualH : 0;
   const monthlyBasicH = weeklyH * WEEKS;
   const monthlyWLH = wlH * WEEKS;
   const ins = calcEmployerIns(salary);
-  const retirement = hasRetirement ? Math.round(salary / 12) : 0;
+  const retirement = Math.round(salary / 12);
   const perPerson = salary + ins.total + retirement;
   const totalPaidH = monthlyBasicH + monthlyWLH;
   const hrCost = totalPaidH > 0 ? Math.round(perPerson / totalPaidH) : 0;
-  return { salary, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, weeklyH, hasWL, hasRetirement, headcount };
+  return { salary, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, weeklyH, hasWL, headcount };
 }
 
 /* 주말 인건비 산출 */
@@ -63,73 +62,15 @@ function calcWeekend(dailyPay, headcount, days, start, end, breakMin) {
   const eh = parseInt(end.split(":")[0]), em = parseInt(end.split(":")[1]);
   const totalMin = (eh * 60 + em) - (sh * 60 + sm);
   const actualH = Math.max(0, (totalMin - breakMin) / 60);
-  const weeklyH = actualH * days;
-  const hasRetirement = weeklyH >= 15;
   const monthlyPay = dailyPay * days * 5;
   const ins = calcEmployerIns(monthlyPay);
-  const retirement = hasRetirement ? Math.round(monthlyPay / 12) : 0;
+  const retirement = Math.round(monthlyPay / 12);
   const perPerson = monthlyPay + ins.total + retirement;
   const hrCost = actualH > 0 ? Math.round(perPerson / (actualH * days * WEEKS)) : 0;
-  return { dailyPay, monthlyPay, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, weeklyH, hasRetirement, days, headcount };
-}
-
-/* 비밀번호 해시 */
-const DEFAULT_PW_HASH = "b7d98452";
-function simpleHash(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
-  return (h >>> 0).toString(16).slice(0, 8);
-}
-function getSavedHash() {
-  try { return localStorage.getItem("mrpark_pw_hash") || DEFAULT_PW_HASH; } catch { return DEFAULT_PW_HASH; }
+  return { dailyPay, monthlyPay, ins, retirement, perPerson, total: perPerson * headcount, hrCost, actualH, days, headcount };
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(() => {
-    try { return sessionStorage.getItem("mrpark_auth") === "1"; } catch { return false; }
-  });
-  const [pw, setPw] = useState("");
-  const [pwErr, setPwErr] = useState(false);
-
-  /* 비밀번호 변경 */
-  const [showPwChange, setShowPwChange] = useState(false);
-  const [cpCurrent, setCpCurrent] = useState("");
-  const [cpNew, setCpNew] = useState("");
-  const [cpConfirm, setCpConfirm] = useState("");
-  const [cpMsg, setCpMsg] = useState({ text: "", ok: false });
-
-  const handleLogin = () => {
-    if (simpleHash(pw) === getSavedHash()) {
-      setAuthed(true);
-      try { sessionStorage.setItem("mrpark_auth", "1"); } catch {}
-    } else {
-      setPwErr(true);
-      setTimeout(() => setPwErr(false), 1500);
-    }
-  };
-
-  const handleLogout = () => {
-    setAuthed(false);
-    setPw("");
-    try { sessionStorage.removeItem("mrpark_auth"); } catch {}
-  };
-
-  const handlePwChange = () => {
-    if (simpleHash(cpCurrent) !== getSavedHash()) {
-      setCpMsg({ text: "현재 비밀번호가 일치하지 않습니다", ok: false }); return;
-    }
-    if (cpNew.length < 4) {
-      setCpMsg({ text: "새 비밀번호는 4자 이상이어야 합니다", ok: false }); return;
-    }
-    if (cpNew !== cpConfirm) {
-      setCpMsg({ text: "새 비밀번호가 일치하지 않습니다", ok: false }); return;
-    }
-    try { localStorage.setItem("mrpark_pw_hash", simpleHash(cpNew)); } catch {}
-    setCpMsg({ text: "비밀번호가 변경되었습니다!", ok: true });
-    setCpCurrent(""); setCpNew(""); setCpConfirm("");
-    setTimeout(() => { setShowPwChange(false); setCpMsg({ text: "", ok: false }); }, 1200);
-  };
-
   /* ── 견적산출표 state ── */
   const [wdSalary, setWdSalary] = useState(2200000);
   const [wdHead, setWdHead] = useState(1);
@@ -147,10 +88,9 @@ export default function App() {
   const [opSupport, setOpSupport] = useState(2000000);
   const [insurance, setInsurance] = useState(500000);
 
-  /* ── Discount ── */
-  const [discountMode, setDiscountMode] = useState("amount");
+  /* ── 에누리 ── */
+  const [discountMode, setDiscountMode] = useState("amount"); // "amount" | "percent"
   const [discountValue, setDiscountValue] = useState(0);
-  const [discountInput, setDiscountInput] = useState("");
 
   /* ── 견적서 폼 state ── */
   const [clientSite, setClientSite] = useState("");
@@ -169,41 +109,6 @@ export default function App() {
       document.head.appendChild(link);
     }
   }, []);
-
-  if (!authed) {
-    return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a1654 0%, #1428A0 50%, #1e3ab8 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Noto Sans KR','맑은 고딕',sans-serif" }}>
-        <div style={{ width: 360, background: "#fff", borderRadius: 20, padding: "48px 36px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#1428A0", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#F5B731", fontWeight: 900, fontSize: 28 }}>P</span>
-          </div>
-          <div style={{ fontWeight: 900, fontSize: 18, color: "#1428A0", marginBottom: 4 }}>(주)미스터팍</div>
-          <div style={{ fontSize: 12, color: "#999", marginBottom: 32 }}>발렛맨 서비스 견적 시스템</div>
-          <input
-            type="password"
-            value={pw}
-            onChange={e => setPw(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-            placeholder="비밀번호를 입력하세요"
-            style={{
-              width: "100%", padding: "14px 16px", border: `2px solid ${pwErr ? "#E53935" : "#dde0e8"}`,
-              borderRadius: 12, fontSize: 15, outline: "none", textAlign: "center",
-              background: pwErr ? "#fff5f5" : "#f8f9fb", transition: "all 0.2s",
-            }}
-          />
-          {pwErr && <div style={{ color: "#E53935", fontSize: 12, fontWeight: 700, marginTop: 8 }}>비밀번호가 일치하지 않습니다</div>}
-          <button onClick={handleLogin} style={{
-            width: "100%", marginTop: 16, padding: "14px 0", borderRadius: 12, border: "none",
-            background: "#1428A0", color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(20,40,160,0.3)",
-          }}>
-            로그인
-          </button>
-          <div style={{ marginTop: 24, fontSize: 10, color: "#ccc" }}>© 2026 Mr. Park Co., Ltd.</div>
-        </div>
-      </div>
-    );
-  }
 
   /* ── 계산 ── */
   const weDays = (weChecked.sat ? 1 : 0) + (weChecked.sun ? 1 : 0);
@@ -226,15 +131,14 @@ export default function App() {
   const handlePrint = () => {
     const el = printRef.current;
     if (!el) return;
-    let html = el.innerHTML;
     const w = window.open("", "_blank");
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>견적서</title>
       <link rel="stylesheet" href="${FONT_LINK}">
       <style>
-        @page{size:A4;margin:10mm}
+        @page{size:A4;margin:15mm}
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Noto Sans KR','맑은 고딕','Malgun Gothic',sans-serif;color:#222;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      </style></head><body>${html}</body></html>`);
+      </style></head><body>${el.innerHTML}</body></html>`);
     w.document.close();
     setTimeout(() => { w.print(); w.close(); }, 400);
   };
@@ -259,39 +163,11 @@ export default function App() {
       {/* ═══ 헤더 ═══ */}
       <div style={{ background: C.navy, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 12px rgba(20,40,160,0.3)" }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 14, color: C.navy }}>P</div>
-        <div style={{ flex: 1 }}>
+        <div>
           <div style={{ color: C.white, fontWeight: 900, fontSize: 16, letterSpacing: -0.5 }}>(주)미스터팍 발렛맨 서비스</div>
           <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>견적 산출 · 견적서 자동 생성 시스템 · 2026</div>
         </div>
-        <button onClick={() => { setShowPwChange(true); setCpMsg({ text: "", ok: false }); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>🔒 비밀번호 변경</button>
-        <button onClick={handleLogout} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>로그아웃</button>
       </div>
-
-      {/* ═══ 비밀번호 변경 모달 ═══ */}
-      {showPwChange && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={() => setShowPwChange(false)}>
-          <div style={{ width: 380, background: C.white, borderRadius: 16, padding: "32px 28px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight: 900, fontSize: 16, color: C.navy, marginBottom: 20 }}>🔒 비밀번호 변경</div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 4 }}>현재 비밀번호</label>
-              <input type="password" value={cpCurrent} onChange={e => setCpCurrent(e.target.value)} placeholder="현재 비밀번호" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: "none" }} />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 4 }}>새 비밀번호</label>
-              <input type="password" value={cpNew} onChange={e => setCpNew(e.target.value)} placeholder="새 비밀번호 (4자 이상)" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: "none" }} />
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 4 }}>새 비밀번호 확인</label>
-              <input type="password" value={cpConfirm} onChange={e => setCpConfirm(e.target.value)} onKeyDown={e => e.key === "Enter" && handlePwChange()} placeholder="새 비밀번호 확인" style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: "none" }} />
-            </div>
-            {cpMsg.text && <div style={{ fontSize: 12, fontWeight: 700, color: cpMsg.ok ? C.green : C.red, marginBottom: 12, textAlign: "center" }}>{cpMsg.text}</div>}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowPwChange(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: `1.5px solid ${C.border}`, background: C.white, color: C.gray, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>취소</button>
-              <button onClick={handlePwChange} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: C.navy, color: C.white, fontWeight: 900, fontSize: 13, cursor: "pointer" }}>변경</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ═══ 2컬럼 레이아웃 ═══ */}
       <div style={{ display: "flex", gap: 0, maxWidth: 1440, margin: "0 auto", minHeight: "calc(100vh - 64px)" }}>
@@ -307,7 +183,7 @@ export default function App() {
 
           {/* ── 1. 인건비 ── */}
           <div style={{ background: C.white, borderRadius: 12, marginBottom: 12, overflow: "hidden", border: `1px solid ${C.border}` }}>
-            {sectionHeader("1", "인건비", "급여 + 사업주 4대보험 + 퇴직충당금(주15h↑)")}
+            {sectionHeader("1", "인건비", "급여 + 사업주 4대보험 + 퇴직충당금")}
             <div style={{ padding: 16 }}>
 
               {/* 평일 */}
@@ -323,7 +199,7 @@ export default function App() {
                   </div>
                   <div>
                     <label style={labelStyle}>인원 (명)</label>
-                    <input type="number" value={wdHead} min={0} onChange={e => setWdHead(parseInt(e.target.value) || 0)} style={{ ...inputStyle, textAlign: "center", fontWeight: 700 }} />
+                    <input type="number" value={wdHead} min={1} onChange={e => setWdHead(parseInt(e.target.value) || 1)} style={{ ...inputStyle, textAlign: "center", fontWeight: 700 }} />
                   </div>
                 </div>
                 <label style={labelStyle}>근무시간</label>
@@ -331,7 +207,7 @@ export default function App() {
                   <input type="time" value={wdStart} onChange={e => setWdStart(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
                   <span style={{ color: C.gray }}>~</span>
                   <input type="time" value={wdEnd} onChange={e => setWdEnd(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
-                  <input type="number" value={wdBreak} min={0} step={30} onChange={e => setWdBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 70, textAlign: "center" }} />
+                  <input type="number" value={wdBreak} min={0} step={30} onChange={e => setWdBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 56, textAlign: "center" }} />
                   <span style={{ fontSize: 11, color: C.gray, whiteSpace: "nowrap" }}>분 휴게</span>
                 </div>
                 <div style={{ display: "flex", gap: 12, fontSize: 11, color: C.navy, fontWeight: 700 }}>
@@ -346,16 +222,13 @@ export default function App() {
                   {[
                     ["급여", weekday.salary],
                     ["사업주 4대보험", weekday.ins.total],
-                    ...(weekday.hasRetirement ? [["퇴직충당금 (÷12)", weekday.retirement]] : []),
+                    ["퇴직충당금 (÷12)", weekday.retirement],
                   ].map(([l, v]) => (
                     <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
                       <span style={{ color: C.gray }}>{l}</span>
                       <span style={{ fontWeight: 700, fontFamily: numFont }}>{fmt(v)}원</span>
                     </div>
                   ))}
-                  {!weekday.hasRetirement && (
-                    <div style={{ fontSize: 10, color: "#e53935", marginBottom: 2 }}>※ 주 {weekday.weeklyH.toFixed(1)}h — 15h 미만으로 퇴직충당금 미적용</div>
-                  )}
                   <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                     <span style={{ fontWeight: 800 }}>1인 합계</span>
                     <span style={{ fontWeight: 900, color: C.navy, fontSize: 13, fontFamily: numFont }}>{fmt(weekday.perPerson)}원</span>
@@ -403,11 +276,11 @@ export default function App() {
                       <input type="time" value={weStart} onChange={e => setWeStart(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
                       <span style={{ color: C.gray }}>~</span>
                       <input type="time" value={weEnd} onChange={e => setWeEnd(e.target.value)} style={{ ...inputStyle, flex: 1, textAlign: "center" }} />
-                      <input type="number" value={weBreak} min={0} step={30} onChange={e => setWeBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 70, textAlign: "center" }} />
+                      <input type="number" value={weBreak} min={0} step={30} onChange={e => setWeBreak(parseInt(e.target.value) || 0)} style={{ ...inputStyle, width: 56, textAlign: "center" }} />
                       <span style={{ fontSize: 11, color: C.gray, whiteSpace: "nowrap" }}>분 휴게</span>
                     </div>
                     <div style={{ fontSize: 11, color: C.navy, fontWeight: 700 }}>
-                      실근무 {weekend.actualH.toFixed(1)}h/일 · <span style={{ color: weekend.hasRetirement ? C.navy : "#e53935" }}>주 {weekend.weeklyH.toFixed(1)}h</span>
+                      실근무 {weekend.actualH.toFixed(1)}h/일
                     </div>
 
                     <div style={{ marginTop: 10, background: C.lightGray, borderRadius: 8, padding: 10 }}>
@@ -415,16 +288,13 @@ export default function App() {
                       {[
                         [`일당 × ${weDays}일 × 5주`, weekend.monthlyPay],
                         ["사업주 4대보험", weekend.ins.total],
-                        ...(weekend.hasRetirement ? [["퇴직충당금 (÷12)", weekend.retirement]] : []),
+                        ["퇴직충당금 (÷12)", weekend.retirement],
                       ].map(([l, v]) => (
                         <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
                           <span style={{ color: C.gray }}>{l}</span>
                           <span style={{ fontWeight: 700, fontFamily: numFont }}>{fmt(v)}원</span>
                         </div>
                       ))}
-                      {!weekend.hasRetirement && (
-                        <div style={{ fontSize: 10, color: "#e53935", marginBottom: 2 }}>※ 주 {weekend.weeklyH.toFixed(1)}h — 15h 미만으로 퇴직충당금 미적용</div>
-                      )}
                       <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                         <span style={{ fontWeight: 800 }}>1인 합계</span>
                         <span style={{ fontWeight: 900, color: C.navy, fontSize: 13, fontFamily: numFont }}>{fmt(weekend.perPerson)}원</span>
@@ -492,10 +362,10 @@ export default function App() {
               </div>
             ))}
 
-            {/* Discount 표시 */}
+            {/* 에누리 표시 */}
             {discountAmt > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#ff9800", marginTop: 4 }}>
-                <span>Discount ({discountMode === "percent" ? `${discountValue}%` : "직접입력"})</span>
+                <span>에누리 ({discountMode === "percent" ? `${discountValue}%` : "직접입력"})</span>
                 <span style={{ fontWeight: 800, fontFamily: numFont }}>-{fmt(discountAmt)}원</span>
               </div>
             )}
@@ -521,24 +391,24 @@ export default function App() {
             </div>
           </div>
 
-          {/* ── Discount ── */}
+          {/* ── 에누리 ── */}
           <div style={{ background: C.white, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.border}` }}>
             <div style={{ background: "#ff9800", padding: "10px 16px", display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 16 }}>🏷️</span>
-              <span style={{ color: C.white, fontWeight: 800, fontSize: 14 }}>Discount</span>
+              <span style={{ color: C.white, fontWeight: 800, fontSize: 14 }}>에누리 (할인)</span>
               {discountAmt > 0 && <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 11 }}>-{fmt(discountAmt)}원 적용중</span>}
             </div>
             <div style={{ padding: 16 }}>
               {/* 모드 선택 */}
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                 {[["amount", "금액 직접입력"], ["percent", "% 할인율"]].map(([k, v]) => (
-                  <button key={k} onClick={() => { setDiscountMode(k); setDiscountValue(0); setDiscountInput(""); }}
+                  <button key={k} onClick={() => { setDiscountMode(k); setDiscountValue(0); }}
                     style={discountMode === k ? { ...chipActive, background: "#ff9800", borderColor: "#ff9800" } : chipInactive}>
                     {v}
                   </button>
                 ))}
                 {discountAmt > 0 && (
-                  <button onClick={() => { setDiscountValue(0); setDiscountInput(""); }}
+                  <button onClick={() => setDiscountValue(0)}
                     style={{ ...chipInactive, color: C.red, borderColor: C.red, marginLeft: "auto", fontSize: 11 }}>
                     초기화
                   </button>
@@ -571,7 +441,7 @@ export default function App() {
                   {/* 금액 버튼 */}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                     {[100000, 200000, 300000, 500000].map(v => (
-                      <button key={v} onClick={() => { setDiscountValue(v); setDiscountInput(fmt(v)); }}
+                      <button key={v} onClick={() => setDiscountValue(v)}
                         style={discountValue === v
                           ? { ...chipActive, background: "#ff9800", borderColor: "#ff9800" }
                           : chipInactive}>
@@ -579,15 +449,8 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <input type="text" value={discountInput}
-                    onFocus={e => { if (discountValue === 0) setDiscountInput(""); }}
-                    onChange={e => {
-                      const raw = e.target.value.replace(/,/g, "");
-                      if (raw === "") { setDiscountInput(""); setDiscountValue(0); return; }
-                      const num = parseInt(raw);
-                      if (!isNaN(num)) { setDiscountInput(fmt(num)); setDiscountValue(Math.max(0, num)); }
-                    }}
-                    placeholder="할인 금액 직접 입력"
+                  <input type="text" value={fmt(discountValue)}
+                    onChange={e => setDiscountValue(Math.max(0, parseInt(e.target.value.replace(/,/g,"")) || 0))}
                     style={{ ...inputStyle, fontWeight: 800, fontSize: 16, textAlign: "right" }} />
                   {discountValue > 0 && rawSubtotal > 0 && (
                     <div style={{ textAlign: "right", fontSize: 11, color: "#ff9800", marginTop: 4, fontWeight: 700 }}>
@@ -638,112 +501,88 @@ export default function App() {
           <div ref={printRef}>
             <div style={{
               width: "100%", maxWidth: 680, margin: "0 auto",
-              background: C.white, borderRadius: 4, padding: "28px 32px",
+              background: C.white, borderRadius: 4, padding: "40px 36px",
               boxShadow: "0 2px 20px rgba(0,0,0,0.08)", border: `1px solid ${C.border}`,
-              fontFamily: "'맑은 고딕','Malgun Gothic',sans-serif", color: C.dark, lineHeight: 1.5,
+              fontFamily: "'맑은 고딕','Malgun Gothic',sans-serif", color: C.dark, lineHeight: 1.6,
             }}>
 
-              {/* 타이틀 + 로고 */}
-              <div style={{ background: C.navy, borderRadius: 8, padding: "18px 24px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: C.white, margin: 0, letterSpacing: 1 }}>주차관리 서비스 견적서</div>
-                  <div style={{ height: 2, width: 60, background: C.gold, borderRadius: 2, marginTop: 8 }} />
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: C.gold, letterSpacing: 4, marginTop: 1 }}>VALETMAN</div>
-                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.5)", letterSpacing: 2 }}>MEMBERS</div>
-                </div>
-              </div>
+              {/* 타이틀 */}
+              <h1 style={{ fontSize: 28, fontWeight: 900, color: C.dark, margin: "0 0 12px 0", letterSpacing: -0.5 }}>주차관리 서비스 견적서</h1>
 
               {/* 인사말 */}
-              <div style={{ fontSize: 10, color: C.gray, lineHeight: 1.7, marginBottom: 10 }}>
-                <div>최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다.</div>
-                <div>언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.</div>
+              <div style={{ fontSize: 12, color: C.gray, lineHeight: 1.9, marginBottom: 20 }}>
+                최고의 고객 감동으로 사업체의 발전을 최우선하는 발렛맨입니다.<br />
+                언제나 한결같은 마음가짐과 늘 발전하는 모습으로 나아갈 것을 약속드립니다.
               </div>
 
-              {/* 정보 테이블 - 6열 3행 */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12, fontSize: 10, border: `1px solid ${C.border}`, tableLayout: "fixed" }}>
+              {/* 정보 테이블 (좌: 고객/계약 정보, 우: 회사 정보) */}
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 24, fontSize: 12, border: `1px solid ${C.border}`, tableLayout: "fixed" }}>
                 <colgroup>
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "22%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "20%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "24%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "35%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "35%" }} />
                 </colgroup>
                 <tbody>
-                  {(() => {
-                    const th = { padding: "5px 8px", background: "#f4f5f8", fontWeight: 700, color: C.dark, textAlign: "center", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 10, whiteSpace: "nowrap" };
-                    const td = { padding: "5px 8px", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 10, textAlign: "center", wordBreak: "keep-all" };
-                    const thR = { ...th, background: "#eef0f6", color: C.navy };
+                  {[
+                    { leftLabel: "현장명", leftVal: clientSite || "(미입력)", rightLabel: "상호명", rightVal: "㈜미스터팍" },
+                    { leftLabel: "견적일", leftVal: dateStr, rightLabel: "대표", rightVal: "이지섭" },
+                    { leftLabel: "계약형태", leftVal: contractType, rightLabel: "등록번호", rightVal: "102-88-01109" },
+                    { leftLabel: "계약기간", leftVal: contractPeriod, rightLabel: "주소", rightVal: "인천광역시 연수구 갯벌로 12, 인천테크노파크 갯벌타워 1501A,B호" },
+                    { leftLabel: "운영시간", leftVal: operatingHours, rightLabel: "전화", rightVal: "1899-1871" },
+                  ].map((row, i) => {
+                    const thStyle = { padding: "10px 14px", background: "#f4f5f8", fontWeight: 700, color: C.dark, textAlign: "center", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 12, whiteSpace: "nowrap" };
+                    const tdStyle = { padding: "10px 14px", borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, fontSize: 12, color: row.leftVal.includes("미입력") ? "#bbb" : C.dark, textAlign: "center", wordBreak: "keep-all" };
+                    const thStyleR = { ...thStyle, background: "#eef0f6", color: C.navy };
+                    const tdStyleR = { padding: "10px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 12, color: C.dark, textAlign: "center", wordBreak: "keep-all" };
                     return (
-                      <>
-                        <tr>
-                          <td style={th}>현장명</td>
-                          <td style={td}>{clientSite || "(미입력)"}</td>
-                          <td style={th}>계약형태</td>
-                          <td style={td}>{contractType}</td>
-                          <td style={thR}>상호명</td>
-                          <td style={td}>㈜미스터팍</td>
-                        </tr>
-                        <tr>
-                          <td style={th}>견적일</td>
-                          <td style={td}>{dateStr}</td>
-                          <td style={th}>계약기간</td>
-                          <td style={td}>{contractPeriod}</td>
-                          <td style={thR}>대표</td>
-                          <td style={td}>이지섭</td>
-                        </tr>
-                        <tr>
-                          <td style={th}>운영시간</td>
-                          <td style={td}>{operatingHours}</td>
-                          <td style={thR}>등록번호</td>
-                          <td style={td}>102-88-01109</td>
-                          <td style={thR}>전화</td>
-                          <td style={{ ...td, borderRight: "none" }}>1899-1871</td>
-                        </tr>
-                      </>
+                      <tr key={i}>
+                        <td style={thStyle}>{row.leftLabel}</td>
+                        <td style={tdStyle}>{row.leftVal}</td>
+                        <td style={thStyleR}>{row.rightLabel}</td>
+                        <td style={tdStyleR}>{row.rightVal}</td>
+                      </tr>
                     );
-                  })()}
+                  })}
                 </tbody>
               </table>
 
               {/* 견적 금액 하이라이트 */}
-              <div style={{ background: C.navy, borderRadius: 6, padding: "14px 16px", marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ color: C.white, fontWeight: 800, fontSize: 13 }}>견적금액 (부가세 별도)</div>
-                <div style={{ color: C.gold, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, fontFamily: numFont }}>₩ {fmt(subtotal)}</div>
+              <div style={{ background: C.navy, borderRadius: 8, padding: "14px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ color: C.white, fontWeight: 800, fontSize: 14 }}>견적금액 (부가세 별도)</div>
+                <div style={{ color: C.gold, fontWeight: 900, fontSize: 24, letterSpacing: -0.5, fontFamily: numFont }}>₩ {fmt(subtotal)}</div>
               </div>
 
               {/* 상세 내역 테이블 */}
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16, fontSize: 11 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16, fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: C.navy }}>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10, width: 30 }}>No</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 10 }}>항목</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>금액</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "center", fontSize: 10, width: 40 }}>인원</th>
-                    <th style={{ padding: "7px 8px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 10 }}>소계</th>
+                    <th style={{ padding: "8px 10px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 11, width: 36 }}>No</th>
+                    <th style={{ padding: "8px 10px", color: C.white, fontWeight: 700, textAlign: "left", fontSize: 11 }}>항목</th>
+                    <th style={{ padding: "8px 10px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 11 }}>금액</th>
+                    <th style={{ padding: "8px 10px", color: C.white, fontWeight: 700, textAlign: "center", fontSize: 11, width: 50 }}>인원</th>
+                    <th style={{ padding: "8px 10px", color: C.white, fontWeight: 700, textAlign: "right", fontSize: 11 }}>소계</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ...(wdHead > 0 ? [{ name: "인건비 (평일 / 주5일)", amount: weekday.perPerson, qty: wdHead, sub: laborWeekday, detail: `월급 ${fmt(wdSalary)}원 + 4대보험${weekday.hasRetirement ? " + 퇴직충당금" : ""}` }] : []),
-                    ...(weDays > 0 && weHead > 0 ? [{ name: `인건비 (주말 / 주${weDays}일)`, amount: weekend.perPerson, qty: weHead, sub: laborWeekend }] : []),
-                    { name: "운영지원금", amount: opSupport, qty: 1, sub: opSupport, detail: "운영관리 + 사고 리스크 대비" },
-                    { name: "발렛보험비", amount: insurance, qty: 1, sub: insurance, detail: "발렛 차량 사고 보험" },
+                    { no: 1, name: "인건비 (평일 / 주5일)", amount: weekday.perPerson, qty: wdHead, sub: laborWeekday, detail: `월급 ${fmt(wdSalary)}원 + 4대보험 + 퇴직충당금` },
+                    ...(weDays > 0 ? [{ no: 2, name: `인건비 (주말 / 주${weDays}일)`, amount: weekend.perPerson, qty: weHead, sub: laborWeekend, detail: "" }] : []),
+                    { no: weDays > 0 ? 3 : 2, name: "운영지원금", amount: opSupport, qty: 1, sub: opSupport, detail: "운영관리 + 사고 리스크 대비" },
+                    { no: weDays > 0 ? 4 : 3, name: "발렛보험비", amount: insurance, qty: 1, sub: insurance, detail: "발렛 차량 사고 보험" },
                   ].map((row, i) => (
                     <>
-                      <tr key={i} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
-                        <td style={{ padding: "10px 8px", fontWeight: 700, color: C.navy, fontSize: 11 }}>{i + 1}</td>
-                        <td style={{ padding: "10px 8px", fontWeight: 700, fontSize: 11 }}>{row.name}</td>
-                        <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: numFont, fontSize: 11 }}>{fmt(row.amount)}</td>
-                        <td style={{ padding: "10px 8px", textAlign: "center", fontSize: 11 }}>{row.qty}</td>
-                        <td style={{ padding: "10px 8px", textAlign: "right", fontWeight: 700, fontFamily: numFont, fontSize: 11 }}>{fmt(row.sub)}</td>
+                      <tr key={row.no} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#fafbfd" }}>
+                        <td style={{ padding: "9px 10px", fontWeight: 700, color: C.navy }}>{row.no}</td>
+                        <td style={{ padding: "9px 10px", fontWeight: 700 }}>{row.name}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontFamily: numFont }}>{fmt(row.amount)}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "center" }}>{row.qty}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontWeight: 700, fontFamily: numFont }}>{fmt(row.sub)}</td>
                       </tr>
                       {row.detail && (
-                        <tr key={`d-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <tr key={`d-${row.no}`} style={{ borderBottom: `1px solid ${C.border}` }}>
                           <td />
-                          <td colSpan={4} style={{ padding: "3px 8px 8px", fontSize: 9, color: C.gray }}>{row.detail}</td>
+                          <td colSpan={4} style={{ padding: "4px 10px 8px", fontSize: 10, color: C.gray }}>{row.detail}</td>
                         </tr>
                       )}
                     </>
@@ -753,40 +592,40 @@ export default function App() {
 
               {/* 합계 영역 */}
               <div style={{ borderTop: `2px solid ${C.navy}`, paddingTop: 12, marginBottom: 20 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                   <span style={{ color: C.gray }}>공급가액 소계</span>
                   <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(rawSubtotal)}</span>
                 </div>
                 {discountAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5, color: "#ff9800" }}>
-                    <span style={{ fontWeight: 700 }}>Discount {discountMode === "percent" ? `(${discountValue}%)` : ""}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: "#ff9800" }}>
+                    <span style={{ fontWeight: 700 }}>에누리 {discountMode === "percent" ? `(${discountValue}%)` : ""}</span>
                     <span style={{ fontWeight: 800, fontFamily: numFont }}>- ₩ {fmt(discountAmt)}</span>
                   </div>
                 )}
                 {discountAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
-                    <span style={{ color: C.gray }}>공급가액 (Discount 적용)</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ color: C.gray }}>공급가액 (에누리 적용)</span>
                     <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(subtotal)}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 5 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                   <span style={{ color: C.gray }}>부가세 (10%)</span>
                   <span style={{ fontWeight: 700, fontFamily: numFont }}>₩ {fmt(vat)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 900, marginTop: 8, padding: "10px 14px", background: C.goldLight, borderRadius: 5, border: `1.5px solid ${C.gold}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 900, marginTop: 8, padding: "10px 14px", background: C.goldLight, borderRadius: 6, border: `1.5px solid ${C.gold}` }}>
                   <span style={{ color: C.navy }}>합계 (VAT 포함)</span>
                   <span style={{ color: C.navy, fontFamily: numFont }}>₩ {fmt(grandTotal)}</span>
                 </div>
               </div>
 
               {/* 운영 중점 사항 */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: C.dark, marginBottom: 10 }}>· 운영 중점 사항</div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, lineHeight: 1.8 }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 900, color: C.dark, marginBottom: 12 }}>· 운영 중점 사항</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, lineHeight: 1.9 }}>
                   <tbody>
                     <tr style={{ verticalAlign: "top" }}>
-                      <td style={{ width: 120, padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>발렛요원 서비스 차별화</td>
-                      <td style={{ padding: "8px 0 8px 14px", color: C.dark }}>
+                      <td style={{ width: 130, padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>발렛요원 서비스 차별화</td>
+                      <td style={{ padding: "8px 0 8px 16px", color: C.dark }}>
                         <div>-전문 서비스 강사 교육 이수자 현장 투입</div>
                         <div>-고객 편의를 고려하는 감성 케어 서비스 제공</div>
                         <div>-매월 고객사 의견 수렴, 서비스 태도 부족 시 <strong>경고 및 교체 처리</strong></div>
@@ -794,7 +633,7 @@ export default function App() {
                     </tr>
                     <tr style={{ verticalAlign: "top" }}>
                       <td style={{ padding: "8px 0", fontWeight: 400, color: C.dark, whiteSpace: "nowrap" }}>현장 불편 최소화</td>
-                      <td style={{ padding: "8px 0 8px 14px", color: C.dark }}>
+                      <td style={{ padding: "8px 0 8px 16px", color: C.dark }}>
                         <div>-<strong>국내 유일 발렛 전용(주차장 및 도로) 보험 소유 (DB손해보험, 현대해상)</strong></div>
                         <div>-고객 차량 사고 시 보험 처리로 발생되는 자기 부담금 당사 전체 부담</div>
                         <div>-발렛비(주차 요금) 징수 방법 고객사 선택 가능 (현금, 카드 등) 필요시</div>
@@ -805,10 +644,10 @@ export default function App() {
               </div>
 
               {/* 하단 구분선 */}
-              <div style={{ height: 2, background: C.gold, borderRadius: 2, marginBottom: 12 }} />
+              <div style={{ height: 2, background: C.gold, borderRadius: 2, marginBottom: 20 }} />
 
               {/* 최하단 */}
-              <div style={{ textAlign: "center", fontSize: 8, color: "#bbb" }}>
+              <div style={{ textAlign: "center", fontSize: 9, color: "#bbb", marginTop: 16 }}>
                 본 견적서는 (주)미스터팍 견적시스템에서 자동 생성되었습니다.
               </div>
             </div>
